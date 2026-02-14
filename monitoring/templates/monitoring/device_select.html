@@ -1,0 +1,39 @@
+﻿{% extends 'monitoring/base.html' %}
+
+{% block title %}Pilih Perangkat | Health Monitor{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="h3 fw-bold">Pilih Perangkat</h1>
+        <p class="text-muted">Pilih perangkat aktif untuk memantau data.</p>
+    </div>
+    <a class="btn btn-primary" href="{% url 'device_add' %}">Tambah Perangkat</a>
+</div>
+
+{% if devices %}
+    <div class="row g-3">
+        {% for device in devices %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card device-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ device.display_name }}</h5>
+                        <p class="text-muted small mb-2">Kode: {{ device.kode_perangkat }}</p>
+                        <p class="text-muted small">Last seen: {{ device.last_seen|default:'-' }}</p>
+                        <form method="post" action="{% url 'device_select' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="device_id" value="{{ device.id }}">
+                            <button class="btn btn-outline-primary btn-sm" type="submit">Pilih</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="empty-state">
+        <p class="mb-3">Belum ada perangkat terdaftar.</p>
+        <a class="btn btn-primary" href="{% url 'device_add' %}">Tambah Perangkat</a>
+    </div>
+{% endif %}
+{% endblock %}

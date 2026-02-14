@@ -1,0 +1,240 @@
+{% load static %}
+<!doctype html>
+<html lang="id">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Health Monitor{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{% static 'monitoring/styles.css' %}" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+<nav class="hm-navbar navbar navbar-expand-lg navbar-light hm-navbar-sticky">
+  <div class="container-fluid hm-navbar-inner">
+
+    <!-- LEFT: logo + nama + subtitle device -->
+<a class="hm-brand d-flex align-items-center text-decoration-none" href="{% url 'dashboard' %}">
+  <div class="hm-brand-icon">
+    <i class="bi bi-activity"></i>
+  </div>
+  <div class="ms-3">
+    <div class="hm-brand-title">IoT Health Monitor</div>
+    <div class="hm-brand-subtitle">
+      {% if active_device %}
+        {{ active_device.display_name }} ({{ active_device.kode_perangkat }})
+      {% else %}
+        Belum ada perangkat aktif
+      {% endif %}
+    </div>
+  </div>
+</a>
+
+
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain"
+            aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <!-- CENTER: menu -->
+    <div class="collapse navbar-collapse justify-content-end me-3" id="navbarMain">
+      <ul class="navbar-nav hm-nav">
+
+        <li class="nav-item">
+          <a class="nav-link hm-nav-link {% if request.resolver_match.url_name == 'dashboard' %}is-active{% endif %}"
+   href="{% url 'dashboard' %}">
+  <i class="bi bi-activity"></i>
+  <span>Dashboard</span>
+</a>
+
+<a class="nav-link hm-nav-link {% if request.resolver_match.url_name == 'grafik' %}is-active{% endif %}"
+   href="{% url 'grafik' %}">
+  <i class="bi bi-bar-chart-line"></i>
+  <span>Grafik</span>
+</a>
+
+<a class="nav-link hm-nav-link {% if request.resolver_match.url_name == 'histori' %}is-active{% endif %}"
+   href="{% url 'histori' %}">
+  <i class="bi bi-clock-history"></i>
+  <span>Histori</span>
+</a>
+
+        </li>
+
+      </ul>
+    </div>
+
+    <!-- RIGHT: profile pill -->
+    <div class="dropdown">
+      <button class="hm-profile btn dropdown-toggle" type="button" id="profileDropdown"
+        data-bs-toggle="dropdown" aria-expanded="false">
+  <span class="hm-profile-avatar">
+    <i class="bi bi-person"></i>
+  </span>
+  <span class="hm-profile-name">{{ user.username }}</span>
+</button>
+
+
+      <div class="dropdown-menu dropdown-menu-end hm-profile-menu" aria-labelledby="profileDropdown">
+        <div class="hm-profile-head">
+          <div class="hm-profile-head-name">{{ user.username }}</div>
+          <div class="hm-profile-head-email">
+            {{ user.email|default:"" }}
+          </div>
+        </div>
+
+        <div class="dropdown-divider"></div>
+
+        <!-- Aksi: Ganti perangkat -->
+        <a class="dropdown-item hm-menu-item hm-menu-primary" href="#" onclick="openDeviceModal()">
+  <i class="bi bi-phone"></i>
+  <span>Ganti Perangkat</span>
+</a>
+
+<a class="dropdown-item hm-menu-item hm-menu-danger" href="{% url 'logout' %}">
+  <i class="bi bi-box-arrow-right"></i>
+  <span>Logout</span>
+</a>
+
+      </div>
+    </div>
+
+  </div>
+</nav>
+
+<!-- Modal untuk manajemen perangkat -->
+<div class="modal fade" id="deviceModal" tabindex="-1" aria-labelledby="deviceModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deviceModalLabel">Manajemen Perangkat</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Tab navigasi -->
+        <ul class="nav nav-tabs" id="deviceTab" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="add-tab" data-bs-toggle="tab" data-bs-target="#add" type="button" role="tab">Tambah Perangkat</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="list-tab" data-bs-toggle="tab" data-bs-target="#list" type="button" role="tab">Daftar Perangkat</button>
+          </li>
+        </ul>
+        
+        <div class="tab-content mt-3" id="deviceTabContent">
+          <!-- Form Tambah Perangkat -->
+          <div class="tab-pane fade show active" id="add" role="tabpanel">
+            <form id="addDeviceForm" method="post" action="{% url 'device_add' %}">
+              {% csrf_token %}
+              <div class="mb-3">
+                <label for="kode_perangkat" class="form-label">Kode Perangkat</label>
+                <input type="text" class="form-control" id="kode_perangkat" name="kode_perangkat" required>
+                <div class="form-text">Contoh: HM-ESP32-001</div>
+              </div>
+              <div class="mb-3">
+                <label for="nama_perangkat" class="form-label">Nama Perangkat</label>
+                <input type="text" class="form-control" id="nama_perangkat" name="nama_perangkat" required>
+                <div class="form-text">Contoh: ESP32 Ruang Tamu</div>
+              </div>
+              <button type="submit" class="btn btn-primary">Simpan</button>
+            </form>
+          </div>
+          
+          <!-- Daftar Perangkat -->
+          <div class="tab-pane fade" id="list" role="tabpanel">
+            <div id="deviceList">
+              <!-- Daftar perangkat akan dimuat secara dinamis -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<main  class="container main-wrap" style="padding-top: 110px;">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} mt-3" role="alert">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    {% block content %}{% endblock %}
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// Fungsi untuk membuka modal perangkat
+function openDeviceModal() {
+    // Muat daftar perangkat ke tab daftar
+    loadDeviceList();
+    
+    // Tampilkan modal
+    var modal = new bootstrap.Modal(document.getElementById('deviceModal'));
+    modal.show();
+}
+
+// Fungsi untuk memuat daftar perangkat
+function loadDeviceList() {
+    fetch('{% url "api_devices_list" %}')
+    .then(response => response.json())
+    .then(data => {
+        const deviceListDiv = document.getElementById('deviceList');
+        if (data.devices && data.devices.length > 0) {
+            let html = '<div class="table-responsive"><table class="table table-striped"><thead><tr><th>Nama Perangkat</th><th>Kode Perangkat</th><th>Status</th><th>Aksi</th></tr></thead><tbody>';
+            data.devices.forEach(device => {
+                const isActive = device.is_active ? 'Aktif' : 'Tidak Aktif';
+                const statusClass = device.is_active ? 'text-success' : 'text-secondary';
+                html += `<tr>
+                    <td>${device.nama_perangkat || device.kode_perangkat}</td>
+                    <td>${device.kode_perangkat}</td>
+                    <td><span class="${statusClass}">${isActive}</span></td>
+                    <td>
+                        <button class="btn btn-sm ${device.is_active ? 'btn-secondary' : 'btn-primary'}" 
+                                onclick="setActiveDevice('${device.id}')">
+                            ${device.is_active ? 'Aktif' : 'Pilih'}
+                        </button>
+                    </td>
+                </tr>`;
+            });
+            html += '</tbody></table></div>';
+            deviceListDiv.innerHTML = html;
+        } else {
+            deviceListDiv.innerHTML = '<p class="text-muted">Anda belum memiliki perangkat terdaftar.</p>';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('deviceList').innerHTML = '<p class="text-danger">Gagal memuat daftar perangkat.</p>';
+    });
+}
+
+// Fungsi untuk memilih perangkat aktif
+function setActiveDevice(deviceId) {
+    fetch('{% url "api_device_set_active" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({device_id: deviceId})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Refresh halaman untuk memperbarui tampilan
+            location.reload();
+        } else {
+            alert('Gagal mengatur perangkat aktif: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Terjadi kesalahan saat mengatur perangkat aktif.');
+    });
+}
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

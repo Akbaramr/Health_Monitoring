@@ -1,0 +1,85 @@
+SPESIFIKASI UI/UX HALAMAN DASHBOARD
+SISTEM IOT HEALTH MONITOR
+================================================
+
+Dokumen ini berisi spesifikasi tampilan dan perilaku
+HALAMAN DASHBOARD MONITORING.
+
+------------------------------------------------
+A. BANNER KALIBRASI SENSOR
+------------------------------------------------
+- Panel horizontal warna ungu di bagian atas dashboard.
+- Menampilkan teks:
+  "Sensor MAX30102 Sedang Kalibrasi..."
+  "Harap tunggu X detik untuk pembacaan yang akurat"
+- Menampilkan countdown waktu (detik).
+- Menampilkan progress bar sesuai countdown.
+- Banner muncul saat proses pengukuran berlangsung.
+
+------------------------------------------------
+B. PANEL INFORMASI DASHBOARD
+------------------------------------------------
+- Judul:
+  "Dashboard Monitoring Real-time"
+- Subjudul:
+  "Pemantauan kesehatan secara langsung dari sensor IoT"
+
+------------------------------------------------
+C. STATUS KONEKSI & SIMPAN DATA
+------------------------------------------------
+- Status koneksi perangkat:
+  - Terhubung (hijau)
+  - Offline (merah)
+- Tombol "Simpan Data":
+  - Nonaktif jika data belum valid
+  - Aktif jika data valid
+
+------------------------------------------------
+D. KARTU DENYUT JANTUNG
+------------------------------------------------
+- Ikon hati
+- Judul: Denyut Jantung
+- Nilai BPM besar di tengah
+- Jika belum ada data: "-- BPM"
+- Rentang normal: 60–100 BPM
+- Badge status: Normal / Offline / Kritis
+
+------------------------------------------------
+E. KARTU SUHU TUBUH
+------------------------------------------------
+- Ikon termometer
+- Judul: Suhu Tubuh
+- Nilai suhu (°C)
+- Jika belum ada data: "-- °C"
+- Rentang normal: 36.0–37.5 °C
+- Border merah jika kritis
+- Badge status: Normal / Offline / Critical
+
+------------------------------------------------
+F. PANEL STATUS KONDISI KESEHATAN
+------------------------------------------------
+- Panel besar di bagian bawah
+- Judul status:
+  "Status: Normal" atau "Status: Kritis"
+- Ikon peringatan jika kritis
+- Deskripsi:
+  "Parameter kesehatan menunjukkan kondisi kritis. Segera konsultasi medis."
+
+------------------------------------------------
+G. PERILAKU SISTEM
+------------------------------------------------
+- Data ditampilkan setelah siklus pengukuran selesai.
+- User boleh tidak menyimpan data.
+- Pengukuran ulang:
+  - Countdown berjalan kembali
+  - Data lama digantikan data baru
+- Data masuk histori hanya jika tombol Simpan ditekan.
+
+------------------------------------------------
+CATATAN PENTING
+------------------------------------------------
+- Tampilan dashboard harus mengikuti desain.
+- Jangan menghapus countdown.
+- Jangan menambah fitur di luar spesifikasi.
+
+END OF DASHBOARD SPECIFICATION

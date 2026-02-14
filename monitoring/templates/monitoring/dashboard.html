@@ -1,0 +1,308 @@
+{% extends 'monitoring/base.html' %}
+
+{% block title %}Dashboard | Health Monitor{% endblock %}
+
+{% block content %}
+<!-- Banner Kalibrasi Sensor -->
+<div id="calibrationBanner" class="alert alert-primary d-none" role="alert">
+    <div class="d-flex align-items-center">
+        <i class="fas fa-sync-alt fa-spin me-2"></i>
+        <div>
+            <strong>Sensor MAX30102 Sedang Kalibrasi...</strong><br>
+            <span>Harap tunggu <span id="calibrationCountdown">10</span> detik untuk pembacaan yang akurat</span>
+        </div>
+    </div>
+    <div class="progress mt-2">
+        <div id="calibrationProgress" class="progress-bar bg-primary" role="progressbar" style="width: 0%"></div>
+    </div>
+</div>
+
+<!-- Panel Informasi Dashboard -->
+<div class="page-header mb-4">
+    <div>
+        <h1 class="h3 fw-bold">Dashboard Monitoring Real-time</h1>
+        <p class="text-muted">Pemantauan kesehatan secara langsung dari sensor IoT.</p>
+    </div>
+</div>
+
+{% if not active_device %}
+<div class="card">
+    <div class="card-body text-center">
+        <h5 class="fw-semibold mb-2">Belum ada perangkat aktif</h5>
+        <p class="text-muted mb-3">Silakan pilih perangkat dulu untuk melihat data monitoring.</p>
+        <a class="btn btn-primary" href="{% url 'device_select' %}">Pilih Perangkat</a>
+    </div>
+</div>
+{% else %}
+<!-- Status Koneksi & Tombol Simpan Data -->
+<div class="row mb-3">
+    <div class="col-md-6">
+        <div class="d-flex align-items-center">
+            <span class="me-2">Status Koneksi:</span>
+            <span id="connectionStatus" class="badge">-</span>
+        </div>
+    </div>
+    <div class="col-md-6 text-end">
+        <button class="btn btn-success" id="saveBtn" disabled>Simpan Data</button>
+    </div>
+</div>
+
+<!-- Kartu Denyut Jantung -->
+<div class="card mb-3">
+    <div class="card-body text-center">
+        <i class="fas fa-heartbeat text-danger fs-1 mb-2"></i>
+        <h5 class="card-title">Denyut Jantung</h5>
+        <h2 class="card-text" id="hrValue">-- BPM</h2>
+        <p class="text-muted">Rentang normal: 60–100 BPM</p>
+        <span class="badge" id="hrStatus">-</span>
+    </div>
+</div>
+
+<!-- Kartu Suhu Tubuh -->
+<div class="card mb-3">
+    <div class="card-body text-center">
+        <i class="fas fa-thermometer-half text-primary fs-1 mb-2"></i>
+        <h5 class="card-title">Suhu Tubuh</h5>
+        <h2 class="card-text" id="tempValue">-- °C</h2>
+        <p class="text-muted">Rentang normal: 36.0–37.5 °C</p>
+        <span class="badge" id="tempStatus">-</span>
+    </div>
+</div>
+
+<!-- Panel Status Kondisi Kesehatan -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="d-flex align-items-center">
+            <i id="statusIcon" class="fas fa-check-circle text-success fs-2 me-2"></i>
+            <h4 class="card-title mb-0" id="overallStatusTitle">Status: Normal</h4>
+        </div>
+        <p class="mt-2 mb-0" id="overallStatusDesc">Parameter kesehatan menunjukkan kondisi normal.</p>
+    </div>
+</div>
+
+<!-- Status Pembacaan -->
+<div class="card mt-4">
+    <div class="card-body d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+        <div>
+            <div class="fw-semibold">Status pembacaan</div>
+            <div class="small text-muted" id="readingHint">Belum ada data masuk.</div>
+            <div class="small text-danger" id="validHint" style="display:none;">Data belum valid.</div>
+            <div class="small text-info mt-1" id="countdownDisplay" style="display:none;">
+                Pembacaan berikutnya dalam: <span id="countdownTimer">10</span>s
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let lastReadingTime = null;
+    let calibrationInterval = null;
+    let calibrationSeconds = 10;
+
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) {
+            return parts.pop().split(';').shift();
+        }
+        return '';
+    }
+
+    function setBadge(el, text, status) {
+        el.textContent = text || '-';
+        el.className = 'badge'; // Reset classes
+
+        if (status === 'Normal') {
+            el.classList.add('text-bg-success');
+        } else if (status === 'Kritis' || status.includes('Kritis')) {
+            el.classList.add('text-bg-danger');
+        } else if (status === 'Offline') {
+            el.classList.add('text-bg-secondary');
+        } else if (text && text !== '-' && text !== 'Offline') {
+            el.classList.add('text-bg-warning');
+        } else {
+            el.classList.add('text-bg-secondary');
+        }
+    }
+
+    function updateUI(data) {
+        const hrValue = document.getElementById('hrValue');
+        const tempValue = document.getElementById('tempValue');
+        const hrStatus = document.getElementById('hrStatus');
+        const tempStatus = document.getElementById('tempStatus');
+        const overallStatusTitle = document.getElementById('overallStatusTitle');
+        const overallStatusDesc = document.getElementById('overallStatusDesc');
+        const statusIcon = document.getElementById('statusIcon');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const readingHint = document.getElementById('readingHint');
+        const validHint = document.getElementById('validHint');
+        const saveBtn = document.getElementById('saveBtn');
+
+        if (!data.last_reading_time) {
+            hrValue.textContent = '-- BPM';
+            tempValue.textContent = '-- °C';
+            setBadge(hrStatus, '-', null);
+            setBadge(tempStatus, '-', null);
+            overallStatusTitle.textContent = 'Status: -';
+            overallStatusDesc.textContent = 'Belum ada data masuk.';
+            statusIcon.className = 'fas fa-question-circle text-secondary fs-2 me-2';
+            readingHint.textContent = 'Belum ada data masuk.';
+            validHint.style.display = 'none';
+            saveBtn.disabled = true;
+        } else {
+            hrValue.textContent = data.heart_rate_bpm !== null ? data.heart_rate_bpm.toFixed(0) + ' BPM' : '-- BPM';
+            tempValue.textContent = data.body_temp_c !== null ? data.body_temp_c.toFixed(1) + ' °C' : '-- °C';
+            setBadge(hrStatus, data.heart_status, data.heart_status);
+            setBadge(tempStatus, data.temp_status, data.temp_status);
+
+            // Update overall status
+            if (data.overall_status === 'Normal') {
+                overallStatusTitle.textContent = 'Status: Normal';
+                overallStatusDesc.textContent = 'Parameter kesehatan menunjukkan kondisi normal.';
+                statusIcon.className = 'fas fa-check-circle text-success fs-2 me-2';
+            } else {
+                overallStatusTitle.textContent = 'Status: Kritis';
+                overallStatusDesc.textContent = 'Parameter kesehatan menunjukkan kondisi kritis. Segera konsultasi medis.';
+                statusIcon.className = 'fas fa-exclamation-triangle text-danger fs-2 me-2';
+            }
+
+            setBadge(statusIcon.parentElement.previousElementSibling, data.overall_status, data.overall_status);
+
+            if (data.last_reading_time !== lastReadingTime) {
+                readingHint.textContent = 'Data terbaru diterima.';
+                lastReadingTime = data.last_reading_time;
+            } else {
+                readingHint.textContent = 'Menunggu pembacaan berikutnya...';
+            }
+
+            validHint.style.display = data.is_valid ? 'none' : 'block';
+            saveBtn.disabled = !data.can_save;
+        }
+
+        // Update connection status
+        if (data.connection === 'connected') {
+            connectionStatus.textContent = 'Terhubung';
+            connectionStatus.className = 'badge text-bg-success';
+        } else {
+            connectionStatus.textContent = 'Offline';
+            connectionStatus.className = 'badge text-bg-danger';
+        }
+    }
+
+    async function fetchLatest() {
+        {% if active_device %}
+        try {
+            const apiLatestUrl = "{% url 'api_latest' %}";
+            const res = await fetch(apiLatestUrl, {credentials: 'same-origin'});
+            if (!res.ok) {
+                return;
+            }
+            const data = await res.json();
+            updateUI(data);
+        } catch (err) {
+            console.error('Error fetching latest data:', err);
+        }
+        {% endif %}
+    }
+
+    async function saveLatest() {
+        const apiSaveUrl = "{% url 'api_save_latest' %}";
+        const res = await fetch(apiSaveUrl, {
+            method: 'POST',
+            headers: {'X-CSRFToken': getCookie('csrftoken')},
+            credentials: 'same-origin'
+        });
+        if (res.ok) {
+            fetchLatest();
+        }
+    }
+
+    // Timer functionality for countdown display
+    let countdownInterval = null;
+    let countdownSeconds = 0;
+
+    function startCountdown(seconds) {
+        countdownSeconds = seconds;
+        const countdownDisplay = document.getElementById('countdownDisplay');
+        const countdownTimer = document.getElementById('countdownTimer');
+
+        countdownDisplay.style.display = 'block';
+        countdownTimer.textContent = countdownSeconds;
+
+        clearInterval(countdownInterval);
+        countdownInterval = setInterval(() => {
+            countdownSeconds--;
+            countdownTimer.textContent = countdownSeconds;
+
+            if (countdownSeconds <= 0) {
+                clearInterval(countdownInterval);
+                countdownDisplay.style.display = 'none';
+            }
+        }, 1000);
+    }
+
+    function resetCountdown() {
+        clearInterval(countdownInterval);
+        const countdownDisplay = document.getElementById('countdownDisplay');
+        countdownDisplay.style.display = 'none';
+    }
+
+    // Calibration timer
+    function startCalibration() {
+        const banner = document.getElementById('calibrationBanner');
+        const countdownEl = document.getElementById('calibrationCountdown');
+        const progressBar = document.getElementById('calibrationProgress');
+
+        calibrationSeconds = 10;
+        countdownEl.textContent = calibrationSeconds;
+        progressBar.style.width = '0%';
+        banner.classList.remove('d-none');
+
+        clearInterval(calibrationInterval);
+        calibrationInterval = setInterval(() => {
+            calibrationSeconds--;
+            countdownEl.textContent = calibrationSeconds;
+            const percentage = ((10 - calibrationSeconds) / 10) * 100;
+            progressBar.style.width = percentage + '%';
+
+            if (calibrationSeconds <= 0) {
+                clearInterval(calibrationInterval);
+                banner.classList.add('d-none');
+            }
+        }, 1000);
+    }
+
+    {% if active_device %}
+    document.getElementById('saveBtn').addEventListener('click', saveLatest);
+    {% else %}
+    // Disable save button if no active device
+    document.getElementById('saveBtn').disabled = true;
+    {% endif %}
+
+    // Start initial calibration when page loads
+    startCalibration();
+
+    // Fetch data periodically if active device exists
+    fetchLatest();
+    {% if active_device %}
+    setInterval(fetchLatest, 2000);
+    {% endif %}
+
+    // Also start a 10-second countdown that resets when new data comes in
+    setInterval(() => {
+        if (lastReadingTime) {
+            startCountdown(10);
+        }
+    }, 1000); // Check every second if we should start the countdown
+
+    // Initialize countdown if there's already a reading
+    setTimeout(() => {
+        if (lastReadingTime) {
+            startCountdown(10);
+        }
+    }, 100);
+</script>
+{% endblock %}

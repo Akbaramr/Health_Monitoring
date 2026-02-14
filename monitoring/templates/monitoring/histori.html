@@ -1,0 +1,94 @@
+﻿{% extends 'monitoring/base.html' %}
+
+{% block title %}Histori | Health Monitor{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="h3 fw-bold">Histori Pengukuran</h1>
+        <p class="text-muted">Daftar data pengukuran perangkat aktif.</p>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form class="row g-2 align-items-end" method="get">
+            <div class="col-md-4">
+                <label class="form-label">Dari tanggal</label>
+                <input type="date" name="from" value="{{ from_date }}" class="form-control">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Sampai tanggal</label>
+                <input type="date" name="to" value="{{ to_date }}" class="form-control">
+            </div>
+            <div class="col-md-4">
+                <button class="btn btn-primary" type="submit">Filter</button>
+                <a class="btn btn-outline-secondary" href="{% url 'histori' %}">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>Waktu Pengukuran</th>
+                    <th>Denyut Jantung (BPM)</th>
+                    <th>Status Denyut</th>
+                    <th>Suhu Tubuh (C)</th>
+                    <th>Status Suhu</th>
+                    <th>Status Kondisi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in page_obj %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ record.timestamp }}</td>
+                        <td>{{ record.heart_rate_bpm|floatformat:0 }}</td>
+                        <td><span class="badge status-badge {{ record.heart_status|lower }}">{{ record.heart_status }}</span></td>
+                        <td>{{ record.body_temp_c|floatformat:1 }}</td>
+                        <td><span class="badge status-badge {{ record.temp_status|lower }}">{{ record.temp_status }}</span></td>
+                        <td>
+                            <span class="badge {% if record.overall_status == 'Normal' %}text-bg-success{% else %}text-bg-danger{% endif %}">{{ record.overall_status }}</span>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">
+                            {% if active_device %}
+                                Belum ada data histori.
+                            {% else %}
+                                Belum ada perangkat aktif. Silakan pilih perangkat terlebih dahulu.
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if page_obj and page_obj.paginator.num_pages > 1 %}
+    <nav class="mt-3">
+        <ul class="pagination">
+            {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{{ query_params }}">Sebelumnya</a></li>
+            {% else %}
+                <li class="page-item disabled"><span class="page-link">Sebelumnya</span></li>
+            {% endif %}
+
+            <li class="page-item disabled"><span class="page-link">Halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}</span></li>
+
+            {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{{ query_params }}">Berikutnya</a></li>
+            {% else %}
+                <li class="page-item disabled"><span class="page-link">Berikutnya</span></li>
+            {% endif %}
+        </ul>
+    </nav>
+{% endif %}
+{% endblock %}

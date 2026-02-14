@@ -1,0 +1,112 @@
+﻿{% extends 'monitoring/base.html' %}
+
+{% block title %}Grafik | Health Monitor{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="h3 fw-bold">Grafik 20 Data Terakhir</h1>
+        <p class="text-muted">Perangkat: {% if active_device %}{{ active_device.display_name }}{% else %}-{% endif %}</p>
+    </div>
+</div>
+
+{% if not active_device %}
+<div class="card">
+    <div class="card-body text-center">
+        <h5 class="fw-semibold mb-2">Belum ada perangkat aktif</h5>
+        <p class="text-muted mb-3">Silakan pilih perangkat terlebih dahulu untuk melihat grafik data.</p>
+        <a class="btn btn-primary" href="#" onclick="openDeviceModal()">Pilih Perangkat</a>
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body">
+        <div id="chartEmpty" class="empty-state" style="display:none;">
+            Belum ada data cukup untuk ditampilkan.
+        </div>
+        <canvas id="healthChart" height="120"></canvas>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    const emptyEl = document.getElementById('chartEmpty');
+    const canvas = document.getElementById('healthChart');
+
+    {% if active_device %}
+    const apiRecordsUrl = "{% url 'api_records' %}?limit=20";
+
+    async function loadChart() {
+        const res = await fetch(apiRecordsUrl, {credentials: 'same-origin'});
+        if (!res.ok) {
+            // Handle error but still show empty state
+            emptyEl.style.display = 'block';
+            canvas.style.display = 'none';
+            return;
+        }
+        const payload = await res.json();
+        const records = payload.records || [];
+
+        if (records.length < 2) {
+            emptyEl.style.display = 'block';
+            canvas.style.display = 'none';
+            return;
+        }
+
+        const labels = records.map(item => item.timestamp_label);
+        const bpmData = records.map(item => item.heart_rate_bpm);
+        const tempData = records.map(item => item.body_temp_c);
+
+        const ctx = canvas.getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Denyut Jantung (BPM)',
+                        data: bpmData,
+                        borderColor: '#00897b',
+                        backgroundColor: 'rgba(0, 137, 123, 0.15)',
+                        tension: 0.3,
+                        yAxisID: 'y',
+                    },
+                    {
+                        label: 'Suhu Tubuh (C)',
+                        data: tempData,
+                        borderColor: '#ef6c00',
+                        backgroundColor: 'rgba(239, 108, 0, 0.15)',
+                        tension: 0.3,
+                        yAxisID: 'y1',
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: {mode: 'index', intersect: false},
+                scales: {
+                    y: {
+                        position: 'left',
+                        title: {display: true, text: 'BPM'}
+                    },
+                    y1: {
+                        position: 'right',
+                        grid: {drawOnChartArea: false},
+                        title: {display: true, text: 'C'}
+                    }
+                }
+            }
+        });
+    }
+
+    loadChart();
+    {% else %}
+    // Show empty state when no active device
+    emptyEl.style.display = 'block';
+    canvas.style.display = 'none';
+    {% endif %}
+</script>
+{% endblock %}

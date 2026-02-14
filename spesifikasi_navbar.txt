@@ -1,0 +1,82 @@
+SPESIFIKASI UI/UX NAVBAR
+SISTEM IOT HEALTH MONITOR
+================================================
+
+Dokumen ini berisi spesifikasi UI/UX NAVBAR yang HARUS diikuti
+oleh Codex CLI saat merevisi tampilan website.
+
+------------------------------------------------
+A. POSISI & PERILAKU NAVBAR
+------------------------------------------------
+- Navbar bersifat MELAYANG (sticky / fixed).
+- Navbar selalu berada di bagian atas layar.
+- Saat halaman di-scroll ke bawah, navbar tetap terlihat.
+- Navbar tidak menutupi konten (beri padding-top pada body).
+
+------------------------------------------------
+B. STRUKTUR NAVBAR (KIRI – TENGAH – KANAN)
+------------------------------------------------
+
+1. BAGIAN KIRI NAVBAR
+- Menampilkan ikon aplikasi (ikon kesehatan / denyut jantung).
+- Menampilkan nama aplikasi: "IoT Health Monitor".
+- Menampilkan subtitle (teks kecil) nama perangkat aktif:
+  Contoh: "ESP32 Ruang Tamu (ESP32)"
+- Jika belum ada perangkat aktif:
+  Tampilkan teks "Belum ada perangkat aktif".
+
+2. BAGIAN TENGAH NAVBAR (MENU)
+- Menu navigasi horizontal:
+  - Dashboard
+  - Grafik
+  - Histori
+- Menu aktif:
+  - Background berwarna ungu/biru
+  - Teks dan ikon berwarna putih
+- Menu tidak aktif:
+  - Teks berwarna gelap
+  - Tanpa background
+
+3. BAGIAN KANAN NAVBAR (PROFIL USER)
+- Menampilkan ikon user (avatar bulat).
+- Menampilkan nama user yang login.
+- Saat diklik, membuka dropdown menu.
+
+------------------------------------------------
+C. DROPDOWN MENU PROFIL
+------------------------------------------------
+Isi dropdown:
+1. Nama user (informasi login)
+2. Menu "Perangkat"
+3. Menu "Logout"
+
+------------------------------------------------
+D. FITUR PERANGKAT (DARI MENU PROFIL)
+------------------------------------------------
+
+1. TAMBAH PERANGKAT
+- Input Kode Perangkat (manual)
+  Contoh: HM-ESP32-001
+- Input Nama Perangkat
+  Contoh: ESP32 Ruang Tamu
+- Tombol Simpan
+
+2. DAFTAR PERANGKAT
+- Menampilkan daftar perangkat:
+  - Nama perangkat
+  - Kode perangkat
+  - Status (Aktif / Tidak Aktif)
+
+3. PILIH PERANGKAT AKTIF
+- User dapat memilih satu perangkat aktif.
+- Perangkat aktif digunakan untuk monitoring.
+- Nama perangkat aktif ditampilkan di navbar.
+
+------------------------------------------------
+CATATAN PENTING
+------------------------------------------------
+- Tidak menggunakan scan QR.
+- Input kode perangkat dilakukan manual.
+- Jangan menambahkan menu atau fitur navbar lain.
+
+END OF NAVBAR SPECIFICATION

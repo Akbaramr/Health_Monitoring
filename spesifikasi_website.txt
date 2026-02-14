@@ -1,0 +1,296 @@
+
+
+\
+SPESIFIKASI WEBSITE – SISTEM PEMANTAUAN DENYUT JANTUNG & SUHU TUBUH (Django + IoT ESP32)
+=====================================================================================
+
+Tujuan
+------
+Membangun website berbasis Django untuk memantau denyut jantung (BPM) dan suhu tubuh (°C) dari perangkat IoT (ESP32 + sensor MAX30102 & MLX90614).
+Website menyediakan: Login, Pilih Perangkat, Dashboard Monitoring Real-time, Grafik (20 data terakhir), Histori (tabel lengkap) + status kondisi.
+Sistem bersifat ONE-WAY: ESP32 mengirim data ke server; website hanya menampilkan & menyimpan (tidak ada kontrol balik ke ESP32).
+
+Teknologi yang diinginkan
+------------------------
+- Backend: Django (disarankan Django + Django REST Framework untuk endpoint API JSON).
+- Database: SQLite (default Django) – dapat diganti nanti.
+- Frontend: Django templates + Bootstrap 5 (atau CSS sederhana) + Chart.js untuk grafik.
+- Real-time: polling (fetch/axios) berkala dari frontend ke endpoint Django (tanpa WebSocket wajib).
+- Hosting: website akan di-hosting, sehingga endpoint API harus publik.
+
+Konsep Data & Multi-Perangkat
+-----------------------------
+- 1 user dapat memiliki banyak perangkat (multi-device).
+- Setelah login, user wajib memilih perangkat aktif (active device) sebelum melihat data.
+- Perangkat di-identifikasi oleh "kode_perangkat" unik (ditanam di ESP32 dan dicetak sebagai QR stiker di alat).
+- Pada implementasi skripsi boleh hanya 1 perangkat, tetapi fitur pilihan perangkat tetap tersedia.
+
+Model Database (minimal)
+------------------------
+1) Device
+   - id (auto)
+   - user (FK ke auth.User)
+   - kode_perangkat (string, UNIQUE)
+   - nama_perangkat (string, opsional, contoh: "ESP32 Monitoring #1")
+   - is_active (boolean, opsional; bisa juga disimpan per user via session)
+   - last_seen (datetime, update saat ada data masuk)
+   - created_at (datetime)
+
+2) HealthRecord
+   - id (auto)
+   - device (FK ke Device)
+   - timestamp (datetime)  -> waktu server menerima data (auto_now_add) atau dari ESP32 jika dikirim.
+   - heart_rate_bpm (float/int)
+   - body_temp_c (float)
+   - heart_status (string) -> bisa disimpan atau dihitung
+   - temp_status (string)  -> bisa disimpan atau dihitung
+   - overall_status (string) -> "Normal" / "Kritis" (aturan dijelaskan di bawah)
+
+Aturan Klasifikasi Status (sesuai skripsi)
+------------------------------------------
+Denyut jantung:
+- Bradykardia  : < 60 BPM
+- Normal       : 60–100 BPM
+- Takikardia   : > 100 BPM
+
+Suhu tubuh:
+- Hipotermia   : < 36.0 °C
+- Normal       : 36.0–37.5 °C
+- Pireksia     : 37.5–40.0 °C
+- Hipertermia  : > 40.0 °C
+
+Overall status (untuk label "Normal/Kritis" di dashboard):
+- Jika heart_status == "Normal" DAN temp_status == "Normal" => overall_status = "Normal"
+- Selain itu => overall_status = "Kritis"
+
+Autentikasi & Alur Navigasi Utama
+---------------------------------
+A) Halaman LOGIN
+- URL: /login/
+- Form: username + password.
+- Jika login berhasil:
+  - Jika user punya >= 1 perangkat terdaftar => redirect ke /devices/select/
+  - Jika belum punya perangkat => redirect ke /devices/add/ (atau /devices/select/ yang menampilkan empty state + tombol tambah).
+
+B) Halaman PILIH PERANGKAT
+- URL: /devices/select/
+- Menampilkan daftar perangkat milik user (kartu/list):
+  - nama_perangkat (atau fallback: kode_perangkat)
+  - kode_perangkat
+  - last_seen (opsional)
+  - tombol "Pilih" -> set perangkat aktif di session (request.session["active_device_id"])
+- Juga tersedia tombol:
+  - "Tambah Perangkat"
+- Jika hanya ada 1 perangkat, tetap tampilkan tetapi juga boleh auto-select (opsional).
+
+C) Halaman TAMBAH PERANGKAT (pairing kode/QR)
+- URL: /devices/add/
+- Input utama: kode_perangkat (text).
+- Opsional: tombol "Scan QR" (front-end) yang memakai kamera untuk mengisi kode_perangkat otomatis.
+  - Catatan: QR berasal dari stiker yang ditempel pada alat; QR memuat string kode_perangkat.
+- Setelah submit:
+  - Sistem membuat Device baru (kode_perangkat unik). Jika sudah ada milik user, tampilkan pesan "sudah terdaftar".
+  - Redirect ke /devices/select/ atau langsung set aktif dan redirect ke /dashboard/.
+
+Navbar (melayang / floating navbar)
+-----------------------------------
+- Navbar harus tampil di semua halaman setelah login (kecuali login page).
+- Bentuk: navbar fixed / sticky (floating) di bagian atas layar.
+- Efek: tetap terlihat saat user scroll (position: fixed; top:0; width:100%; z-index tinggi).
+- Konten navbar (minimal):
+  - Brand/Logo: "Health Monitor"
+  - Menu: Dashboard | Grafik | Histori | Pilih Perangkat
+  - Info perangkat aktif di kanan: "Perangkat: <nama/kode>" (klik menuju /devices/select/)
+  - Tombol Logout
+- Navbar harus responsif (hamburger menu pada layar kecil).
+
+Struktur Halaman (setelah perangkat aktif dipilih)
+--------------------------------------------------
+
+1) HALAMAN DASHBOARD MONITORING (Real-time)
+- URL: /dashboard/
+- Prasyarat: perangkat aktif tersimpan di session; jika belum, redirect ke /devices/select/.
+
+Komponen UI:
+- Kartu/Panel Denyut Jantung:
+  - Menampilkan nilai BPM real-time (angka besar).
+  - Menampilkan rentang normal (60–100 BPM).
+  - Menampilkan status denyut (Bradykardia/Normal/Takikardia).
+- Kartu/Panel Suhu Tubuh:
+  - Menampilkan nilai °C real-time (angka besar).
+  - Menampilkan rentang normal (36.0–37.5 °C).
+  - Menampilkan status suhu (Hipotermia/Normal/Pireksia/Hipertermia).
+- Panel Status Kondisi (overall):
+  - Badge "Normal" atau "Kritis" berdasarkan aturan overall status.
+- Indikator Koneksi Perangkat:
+  - "Connected" jika last_seen < 30 detik (atau threshold configurable) dari waktu sekarang.
+  - "Disconnected" jika lebih dari threshold.
+  - Tampilkan juga "Last update: <timestamp>"
+
+Perilaku Real-time + "pembacaan 10 detik":
+- Sistem menerapkan pembacaan sensor 10 detik di sisi alat (ESP32). Artinya:
+  - Website tidak menampilkan nilai baru sampai ESP32 selesai akuisisi & mengirim data final.
+- Implementasi di website:
+  - Frontend melakukan polling endpoint "latest reading" setiap 1–2 detik.
+  - Jika belum ada pembaruan baru, nilai tetap.
+  - Ketika nilai baru masuk (timestamp berubah), update UI.
+  - Tampilkan indikator kecil "Reading..." (opsional) yang aktif ketika menunggu pembacaan berikutnya.
+  - Tampilkan countdown 10 detik (opsional, bukan wajib).
+
+Validasi data:
+- Di backend, data dianggap valid jika:
+  - heart_rate_bpm tidak null dan > 0 (dan dalam rentang wajar misal 30–220).
+  - body_temp_c tidak null (dan dalam rentang wajar misal 30.0–45.0).
+  - Jika tidak valid, jangan aktifkan tombol simpan; UI menampilkan "Data belum valid".
+
+Tombol SIMPAN DATA:
+- Default: disabled.
+- Menjadi enabled hanya jika ada data terbaru yang valid dan belum disimpan untuk sesi ini.
+- Ketika user klik "Simpan Data":
+  - Sistem membuat HealthRecord baru untuk perangkat aktif menggunakan nilai terbaru.
+  - Setelah sukses, tombol kembali disabled sampai ada pembacaan baru.
+- Feedback:
+  - toast/alert "Data berhasil disimpan" atau error message.
+
+2) HALAMAN GRAFIK
+- URL: /grafik/
+- Prasyarat: perangkat aktif sudah dipilih.
+- Menampilkan grafik garis (line chart) dua dataset:
+  - Denyut jantung (BPM)
+  - Suhu tubuh (°C)
+- Data: 20 record terakhir (berdasarkan timestamp terbaru) untuk perangkat aktif.
+- Sumbu X: waktu (timestamp) ringkas (misal HH:MM:SS atau dd-mm HH:MM).
+- Sumbu Y kiri: BPM, sumbu Y kanan: °C (boleh 2 axis, atau 1 axis jika disederhanakan).
+- Jika data kurang dari 2 titik, tampilkan empty state: "Belum ada data cukup untuk ditampilkan".
+- Tambahkan ringkasan kecil di atas grafik:
+  - "Menampilkan 20 data terakhir"
+  - "Perangkat: <nama/kode>"
+
+3) HALAMAN HISTORI
+- URL: /histori/
+- Prasyarat: perangkat aktif sudah dipilih.
+- Tabel dengan kolom:
+  - No
+  - Waktu Pengukuran (timestamp)
+  - Denyut Jantung (BPM)
+  - Status Denyut (Bradykardia/Normal/Takikardia)
+  - Suhu Tubuh (°C)
+  - Status Suhu (Hipotermia/Normal/Pireksia/Hipertermia)
+  - Status Kondisi (overall: Normal/Kritis)
+- Fitur tabel:
+  - Pagination (misal 10/25 per halaman).
+  - Pencarian sederhana (opsional): filter tanggal (from-to) atau keyword.
+  - Sorting by timestamp terbaru dulu.
+- Warna badge status (opsional): Normal hijau, Kritis merah, lainnya kuning/oranye.
+
+Endpoint API (untuk ESP32 & Frontend)
+-------------------------------------
+A) Endpoint untuk ESP32 (POST data)
+- URL: /api/iot/ingest/
+- Method: POST
+- Auth: bisa pakai "device_token" sederhana atau "api_key" per perangkat (disarankan), namun untuk skripsi boleh minimal:
+  - Pengiriman menyertakan kode_perangkat.
+- Payload JSON minimal:
+  {
+    "kode_perangkat": "HM-ESP32-001",
+    "heart_rate_bpm": 78,
+    "body_temp_c": 36.7,
+    "timestamp": "2026-02-04T10:00:00Z"   (opsional; jika tidak ada gunakan waktu server)
+  }
+- Response JSON:
+  { "status": "ok" }
+- Server harus:
+  - Temukan Device berdasarkan kode_perangkat.
+  - Update last_seen.
+  - Simpan "latest reading" (lihat catatan di bawah) atau langsung simpan sebagai HealthRecord jika mode auto-save.
+  - UNTUK WEBSITE SESUAI DESKRIPSI: data tidak otomatis masuk histori sampai user klik "Simpan Data".
+    Maka server perlu menyimpan data terakhir (buffer) per perangkat.
+
+Catatan: penyimpanan "latest reading" (buffer)
+- Buat model/table sederhana "DeviceReading" atau field JSON di Device:
+  - device (FK)
+  - last_heart_rate_bpm
+  - last_body_temp_c
+  - last_reading_time
+  - is_valid
+Tujuannya agar dashboard bisa menampilkan nilai real-time tanpa selalu membuat record histori.
+Saat user klik simpan, nilai buffer disalin ke HealthRecord.
+
+B) Endpoint untuk Frontend (GET latest)
+- URL: /api/devices/active/latest/
+- Method: GET (butuh login session)
+- Response:
+  {
+    "kode_perangkat": "...",
+    "nama_perangkat": "...",
+    "last_reading_time": "...",
+    "heart_rate_bpm": ...,
+    "body_temp_c": ...,
+    "heart_status": "...",
+    "temp_status": "...",
+    "overall_status": "...",
+    "connection": "connected|disconnected",
+    "last_seen": "...",
+    "is_valid": true
+  }
+
+C) Endpoint untuk grafik
+- URL: /api/devices/active/records/?limit=20
+- Method: GET (login session)
+- Response: list record terbaru untuk chart.
+
+D) Endpoint simpan data (trigger dari dashboard)
+- URL: /api/devices/active/save-latest/
+- Method: POST (login session)
+- Body kosong atau { "confirm": true }
+- Server membuat HealthRecord dari buffer terbaru jika valid.
+
+UX Rules / Edge Cases
+---------------------
+- Jika user membuka /dashboard/ tanpa perangkat aktif -> redirect /devices/select/.
+- Jika perangkat aktif dihapus, session harus dibersihkan.
+- Jika ESP32 belum pernah mengirim data -> dashboard menampilkan "Belum ada data masuk" dan tombol simpan disabled.
+- Jika disconnected -> tetap tampilkan nilai terakhir tapi tandai "Disconnected".
+- Semua halaman harus menampilkan perangkat aktif di navbar.
+- Logout menghapus session active_device_id.
+
+Routing (ringkas)
+-----------------
+/login/                  -> login page
+/logout/                 -> logout
+/devices/select/         -> pilih perangkat
+/devices/add/            -> tambah perangkat
+/dashboard/              -> dashboard monitoring
+/grafik/                 -> grafik
+/histori/                -> histori
+
+/api/iot/ingest/                          -> POST dari ESP32
+/api/devices/active/latest/               -> GET latest buffer utk dashboard
+/api/devices/active/save-latest/          -> POST simpan ke histori
+/api/devices/active/records/?limit=20     -> GET utk grafik
+/api/devices/active/records/paged/        -> GET utk histori (opsional jika server-side pagination via API)
+
+Tampilan & Layout (desain dasar)
+--------------------------------
+- Tampilan bersih, modern, mudah dibaca.
+- Dashboard: 3–4 kartu utama di atas (HR, Temp, Status, Koneksi), lalu tombol simpan.
+- Grafik: satu halaman dengan chart besar, responsif.
+- Histori: tabel dengan badge status.
+- Navbar floating selalu terlihat dan tidak menutupi konten (beri padding-top pada body setara tinggi navbar).
+
+Catatan Implementasi Penting
+----------------------------
+- Untuk skripsi, cukup polling real-time; tidak wajib websocket.
+- Sensor membaca 10 detik: ini terjadi di sisi ESP32; website hanya menunggu pembaruan data.
+- Pastikan endpoint /api/iot/ingest/ menerima data dari internet publik (CSRF exempt untuk endpoint IoT).
+- Keamanan minimal: validasi kode_perangkat dan batasi endpoint (misal token per device) jika memungkinkan, tapi jangan memperumit.
+
+Keluaran yang diharapkan
+------------------------
+Website Django yang bisa:
+1) Login user.
+2) Pilih perangkat aktif.
+3) Menampilkan dashboard real-time (nilai HR & temp, status, koneksi, tombol simpan aktif setelah data valid).
+4) Menampilkan grafik 20 data terakhir dari histori untuk perangkat aktif.
+5) Menampilkan histori lengkap (tabel) beserta klasifikasi status.
+

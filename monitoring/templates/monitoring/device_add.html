@@ -1,0 +1,33 @@
+﻿{% extends 'monitoring/base.html' %}
+
+{% block title %}Tambah Perangkat | Health Monitor{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="h3 fw-bold">Tambah Perangkat</h1>
+        <p class="text-muted">Masukkan kode perangkat yang tertera pada QR stiker.</p>
+    </div>
+</div>
+
+<div class="card form-card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label">Kode Perangkat</label>
+                {{ form.kode_perangkat }}
+                {% if form.kode_perangkat.errors %}
+                    <div class="text-danger small">{{ form.kode_perangkat.errors.0 }}</div>
+                {% endif %}
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Nama Perangkat (opsional)</label>
+                {{ form.nama_perangkat }}
+            </div>
+            <button class="btn btn-primary" type="submit">Simpan</button>
+            <a class="btn btn-outline-secondary" href="{% url 'device_select' %}">Kembali</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

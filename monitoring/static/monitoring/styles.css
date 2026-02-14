@@ -1,0 +1,579 @@
+﻿@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap');
+
+:root {
+    --hm-primary: #4f46e5; /* ungu (indigo) */
+    --hm-secondary: #0f172a;
+    --hm-accent: #ef6c00;
+    --hm-bg: #f4f7f8;
+    --hm-card: #ffffff;
+}
+
+body {
+  font-family: 'Space Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background: radial-gradient(circle at top, #eef2ff 0%, #f8fafc 55%, #ffffff 100%);
+  color: var(--hm-secondary);
+}
+
+.main-wrap { 
+  padding-top: 88px; 
+}
+
+
+.page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 16px 0 24px;
+}
+
+.card {
+    border: none;
+    border-radius: 16px;
+    background: var(--hm-card);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+.stat-card h2 {
+    font-weight: 700;
+}
+
+.device-card {
+    border-left: 4px solid var(--hm-primary);
+}
+
+.form-card {
+    max-width: 540px;
+}
+
+.empty-state {
+    padding: 32px;
+    text-align: center;
+    color: #64748b;
+    background: #f8fafc;
+    border-radius: 12px;
+}
+
+.login-card {
+    border: none;
+    border-radius: 20px;
+    background: #ffffff;
+}
+
+.status-badge.bradykardia,
+.status-badge.hipotermia {
+    background: #e2e8f0;
+    color: #1e293b;
+}
+
+.status-badge.normal {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status-badge.takikardia,
+.status-badge.pireksia,
+.status-badge.hipertermia {
+    background: #ffedd5;
+    color: #9a3412;
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .navbar-nav .nav-link {
+        margin: 4px 0;
+    }
+}
+/* ========== LOGIN (Figma-like) ========== */
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  padding: 48px 0;
+}
+
+.login-header .login-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  background: var(--hm-primary);
+  color: #fff;
+  font-size: 28px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.14);
+}
+
+.login-title {
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--hm-secondary);
+}
+
+.login-subtitle {
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.login-card {
+  border: none;
+  border-radius: 18px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.10);
+}
+
+.login-card-title {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--hm-primary);
+}
+
+.login-input .input-group-text {
+  background: #fff;
+  border-right: 0;
+  border-color: #e2e8f0;
+  border-radius: 12px 0 0 12px;
+  color: #94a3b8;
+}
+
+.login-input .form-control {
+  border-left: 0;
+  border-color: #e2e8f0;
+  border-radius: 0 12px 12px 0;
+  padding: 12px 14px;
+}
+
+.login-input .form-control:focus {
+  box-shadow: none;
+  border-color: #c7d2fe;
+}
+
+.login-btn {
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-weight: 600;
+  background: var(--hm-primary);
+  border: none;
+  box-shadow: 0 14px 30px rgba(79, 70, 229, 0.22);
+}
+
+.login-btn:hover {
+  filter: brightness(0.97);
+}
+
+.login-footer {
+  color: #475569;
+}
+
+.login-link {
+  font-weight: 700;
+  color: var(--hm-primary);
+  text-decoration: none;
+}
+
+.login-link:hover {
+  text-decoration: underline;
+}
+
+.login-card-footer {
+  border-top: 1px solid #eef2ff;
+}
+
+/* sedikit rapihin jarak label + input */
+.login-page .form-label {
+  margin-bottom: 6px;
+}
+
+.login-page .input-group {
+  margin-bottom: 16px !important;
+}
+
+/* ===============================
+   NAVBAR + PROFIL (IMPian)
+   tempel di paling bawah
+================================= */
+
+.hm-navbar-sticky {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 1200;
+  background: #fff;
+  border-bottom: 1px solid rgba(229,231,235,0.9);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.10);
+}
+
+.hm-navbar-inner {
+  min-height: 72px;
+}
+
+/* kiri: logo kotak + judul + subtitle */
+.hm-brand-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: var(--hm-primary);
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(79, 70, 229, 0.25);
+}
+
+.hm-brand-title {
+  font-weight: 800;
+  color: var(--hm-secondary);
+  line-height: 1.1;
+  font-size: 18px;
+}
+
+.hm-brand-subtitle {
+  margin-top: 2px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+/* tengah: menu pill */
+.hm-nav {
+  gap: 10px;
+  align-items: center;
+}
+
+.hm-nav-link {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px !important;
+  border-radius: 14px;
+  color: #334155 !important;
+  font-weight: 700;
+  transition: 0.2s ease;
+  text-decoration: none;
+}
+
+.hm-nav-link i {
+  font-size: 16px;
+  color: #475569;
+}
+
+.hm-nav-link:hover {
+  background: #f1f5f9;
+  transform: translateY(-1px);
+}
+
+.hm-nav-link.is-active {
+  background: var(--hm-primary);
+  color: #fff !important;
+  box-shadow: 0 10px 20px rgba(79, 70, 229, 0.22);
+}
+
+.hm-nav-link.is-active i {
+  color: #fff;
+}
+
+/* kanan: profil pill */
+.hm-profile {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 12px;
+  background: #eef2ff;
+  border: 1px solid rgba(199, 210, 254, 0.7);
+  border-radius: 16px;
+  padding: 10px 14px;
+  color: var(--hm-secondary) !important;
+  font-weight: 800;
+}
+
+.hm-profile:focus,
+.hm-profile:active {
+  box-shadow: none !important;
+}
+
+.hm-profile-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: var(--hm-primary);
+  color: #fff;
+  display: grid;
+  place-items: center;
+}
+
+.hm-profile-menu {
+  width: 300px;
+  border: none;
+  padding: 0;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14);
+}
+
+.hm-profile-head {
+  padding: 16px 18px 12px;
+}
+
+.hm-profile-head-name {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--hm-secondary);
+}
+
+.hm-profile-head-email {
+  margin-top: 2px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.hm-menu-item {
+  display: flex !important;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  font-weight: 800;
+}
+
+.hm-menu-primary {
+  color: var(--hm-primary) !important;
+}
+
+.hm-menu-primary:hover {
+  background: #eef2ff !important;
+}
+
+.hm-menu-danger {
+  color: #dc2626 !important;
+}
+
+.hm-menu-danger:hover {
+  background: #fff1f2 !important;
+}
+
+/* responsive */
+@media (max-width: 992px) {
+  .hm-nav-link {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .hm-profile {
+    width: 100%;
+    justify-content: center;
+    margin-top: 10px;
+  }
+}
+
+/* ===============================
+   NAVBAR MINIMAL (IMPian)
+================================= */
+
+.hm-navbar-sticky{
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 1200;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(229,231,235,0.85);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.hm-navbar-inner{
+  min-height: 64px;           /* lebih ramping */
+  padding: 10px 16px;         /* rapih */
+}
+
+/* kiri: logo + judul + subtitle */
+.hm-brand-icon{
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: var(--hm-primary);
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(79, 70, 229, 0.18);
+}
+
+.hm-brand-icon i{
+  font-size: 20px;
+  line-height: 1;
+}
+
+.hm-brand-title{
+  font-weight: 400;     /* TIPIS: professional */
+  color: #3128db;
+  line-height: 1.15;
+  font-size: 16px;
+  letter-spacing: 0.2px;
+}
+
+.hm-brand-subtitle{
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: #bbbbbb;
+  font-weight: 400;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* tengah: menu minimal */
+.hm-nav{
+  gap: 12px;
+  align-items: center;
+}
+
+.hm-nav-link{
+  display: inline-flex !important;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px !important;
+  border-radius: 14px;
+  color: #334155 !important;
+  font-weight: 500;            /* TIPIS */
+  transition: 0.18s ease;
+  text-decoration: none;
+}
+
+.hm-nav-link i{
+  font-size: 16px;
+  color: #475569;
+  line-height: 1;
+}
+
+.hm-nav-link:hover{
+  background: rgba(241,245,249,0.9);
+  transform: translateY(-1px);
+}
+
+/* active pill (seperti impian) */
+.hm-nav-link.is-active{
+  background: var(--hm-primary);
+  color: #fff !important;
+  box-shadow: 0 10px 18px rgba(79, 70, 229, 0.20);
+}
+
+.hm-nav-link.is-active i{
+  color: #fff;
+}
+
+/* kanan: profil minimal tanpa panah */
+.hm-profile{
+  display: inline-flex !important;
+  align-items: center;
+  gap: 10px;
+  background: #e0e6fc;
+  border: 1px solid rgba(199, 210, 254, 0.75);
+  border-radius: 16px;
+  padding: 9px 12px;         /* lebih tipis */
+  color: var(--hm-secondary) !important;
+  font-weight: 500;          /* TIPIS */
+}
+
+.hm-profile.dropdown-toggle::after{
+  display: none !important;  /* HILANGKAN TANDA PANAH */
+}
+
+.hm-profile:focus,
+.hm-profile:active{
+  box-shadow: none !important;
+}
+
+.hm-profile-avatar{
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: var(--hm-primary);
+  color: #fff;
+  display: grid;
+  place-items: center;
+}
+
+.hm-profile-avatar i{
+  font-size: 18px;
+  line-height: 1;
+}
+
+.hm-profile-name{
+  font-weight: 500;
+}
+
+/* dropdown menu */
+.hm-profile-menu{
+  width: 300px;
+  border: none;
+  padding: 0;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.14);
+}
+
+.hm-profile-head{
+  padding: 16px 18px 12px;
+}
+
+.hm-profile-head-name{
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--hm-secondary);
+}
+
+.hm-profile-head-email{
+  margin-top: 2px;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.hm-menu-item{
+  display: flex !important;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  font-weight: 600;     /* lebih tipis */
+}
+
+.hm-menu-item i{
+  font-size: 16px;
+}
+
+.hm-menu-primary{
+  color: var(--hm-primary) !important;
+}
+.hm-menu-primary:hover{
+  background: #aab3ff !important;
+}
+
+.hm-menu-danger{
+  color: #dc2626 !important;
+}
+.hm-menu-danger:hover{
+  background: #fff1f2 !important;
+}
+
+/* responsive */
+@media (max-width: 992px){
+  .hm-nav-link{
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .hm-profile{
+    width: 100%;
+    justify-content: center;
+    margin-top: 10px;
+  }
+}
+.hm-nav {
+  margin-right: 8px;
+}
+/* hover & active profile (lebih gelap, profesional) */
+.hm-profile:hover {
+  background: #e0e7ff !important; /* lebih gelap dari #eef2ff */
+  border-color: #3b62ff;
+}
+
+.hm-profile:active,
+.hm-profile.show {
+  background: #dbeafe !important;
+}
