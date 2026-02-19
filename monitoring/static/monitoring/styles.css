@@ -820,6 +820,50 @@ body {
   color: #dc2626;
 }
 
+/* Normal Values Info */
+.normal-values-info {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-top: 20px;
+  padding: 16px 20px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(229, 231, 235, 0.9);
+  font-size: 14px;
+  color: #4b5563;
+  flex-wrap: wrap;
+}
+
+.normal-values-info > span:first-child {
+  font-weight: 600;
+  color: #374151;
+}
+
+.normal-values-info i {
+  color: #3b82f6;
+}
+
+.normal-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.normal-item i {
+  color: #10b981;
+}
+
+.normal-item strong {
+  color: #166534;
+}
+
+.normal-divider {
+  color: #e5e7eb;
+  font-weight: 300;
+}
+
 /* Status Pill */
 .status-pill {
   display: inline-flex;
