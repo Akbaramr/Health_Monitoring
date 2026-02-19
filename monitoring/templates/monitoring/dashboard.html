@@ -3,20 +3,6 @@
 {% block title %}Dashboard | Health Monitor{% endblock %}
 
 {% block content %}
-<!-- Banner Kalibrasi Sensor -->
-<div id="calibrationBanner" class="alert alert-primary d-none" role="alert">
-    <div class="d-flex align-items-center">
-        <i class="fas fa-sync-alt fa-spin me-2"></i>
-        <div>
-            <strong>Sensor MAX30102 Sedang Kalibrasi...</strong><br>
-            <span>Harap tunggu <span id="calibrationCountdown">10</span> detik untuk pembacaan yang akurat</span>
-        </div>
-    </div>
-    <div class="progress mt-2">
-        <div id="calibrationProgress" class="progress-bar bg-primary" role="progressbar" style="width: 0%"></div>
-    </div>
-</div>
-
 <!-- Panel Informasi Dashboard -->
 <div class="page-header mb-4">
     <div>
@@ -87,9 +73,6 @@
             <div class="fw-semibold">Status pembacaan</div>
             <div class="small text-muted" id="readingHint">Belum ada data masuk.</div>
             <div class="small text-danger" id="validHint" style="display:none;">Data belum valid.</div>
-            <div class="small text-info mt-1" id="countdownDisplay" style="display:none;">
-                Pembacaan berikutnya dalam: <span id="countdownTimer">10</span>s
-            </div>
         </div>
     </div>
 </div>
@@ -99,8 +82,6 @@
 {% block scripts %}
 <script>
     let lastReadingTime = null;
-    let calibrationInterval = null;
-    let calibrationSeconds = 10;
 
     function getCookie(name) {
         const value = `; ${document.cookie}`;
@@ -220,61 +201,6 @@
         }
     }
 
-    // Timer functionality for countdown display
-    let countdownInterval = null;
-    let countdownSeconds = 0;
-
-    function startCountdown(seconds) {
-        countdownSeconds = seconds;
-        const countdownDisplay = document.getElementById('countdownDisplay');
-        const countdownTimer = document.getElementById('countdownTimer');
-
-        countdownDisplay.style.display = 'block';
-        countdownTimer.textContent = countdownSeconds;
-
-        clearInterval(countdownInterval);
-        countdownInterval = setInterval(() => {
-            countdownSeconds--;
-            countdownTimer.textContent = countdownSeconds;
-
-            if (countdownSeconds <= 0) {
-                clearInterval(countdownInterval);
-                countdownDisplay.style.display = 'none';
-            }
-        }, 1000);
-    }
-
-    function resetCountdown() {
-        clearInterval(countdownInterval);
-        const countdownDisplay = document.getElementById('countdownDisplay');
-        countdownDisplay.style.display = 'none';
-    }
-
-    // Calibration timer
-    function startCalibration() {
-        const banner = document.getElementById('calibrationBanner');
-        const countdownEl = document.getElementById('calibrationCountdown');
-        const progressBar = document.getElementById('calibrationProgress');
-
-        calibrationSeconds = 10;
-        countdownEl.textContent = calibrationSeconds;
-        progressBar.style.width = '0%';
-        banner.classList.remove('d-none');
-
-        clearInterval(calibrationInterval);
-        calibrationInterval = setInterval(() => {
-            calibrationSeconds--;
-            countdownEl.textContent = calibrationSeconds;
-            const percentage = ((10 - calibrationSeconds) / 10) * 100;
-            progressBar.style.width = percentage + '%';
-
-            if (calibrationSeconds <= 0) {
-                clearInterval(calibrationInterval);
-                banner.classList.add('d-none');
-            }
-        }, 1000);
-    }
-
     {% if active_device %}
     document.getElementById('saveBtn').addEventListener('click', saveLatest);
     {% else %}
@@ -282,27 +208,10 @@
     document.getElementById('saveBtn').disabled = true;
     {% endif %}
 
-    // Start initial calibration when page loads
-    startCalibration();
-
     // Fetch data periodically if active device exists
     fetchLatest();
     {% if active_device %}
     setInterval(fetchLatest, 2000);
     {% endif %}
-
-    // Also start a 10-second countdown that resets when new data comes in
-    setInterval(() => {
-        if (lastReadingTime) {
-            startCountdown(10);
-        }
-    }, 1000); // Check every second if we should start the countdown
-
-    // Initialize countdown if there's already a reading
-    setTimeout(() => {
-        if (lastReadingTime) {
-            startCountdown(10);
-        }
-    }, 100);
 </script>
 {% endblock %}

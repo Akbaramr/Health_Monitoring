@@ -577,3 +577,92 @@ body {
 .hm-profile.show {
   background: #dbeafe !important;
 }
+
+/* =========================
+   GRAFIK PAGE (IMPian)
+========================= */
+
+/* HERO CARD */
+.hm-hero-card{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  padding:22px 24px;
+  border-radius:18px;
+  background:#fff;
+  border:1px solid rgba(229,231,235,0.9);
+  box-shadow: 0 10px 26px rgba(15,23,42,0.08);
+  margin: 18px 0 18px;
+}
+
+.hm-hero-icon{
+  width:56px;
+  height:56px;
+  border-radius:16px;
+  display:grid;
+  place-items:center;
+  background:#eef2ff;
+  color: var(--hm-primary);
+  font-size:26px;
+}
+
+.hm-hero-title{
+  font-size:22px;
+  font-weight:800;
+  color: var(--hm-secondary);
+  line-height:1.15;
+}
+
+.hm-hero-subtitle{
+  margin-top:6px;
+  color:#64748b;
+  font-size:14px;
+  font-weight:500;
+}
+
+/* WRAPPER CARD */
+.hm-chart-wrap{
+  border-radius:18px;
+}
+
+.hm-chart-block{
+  padding: 6px 4px 14px;
+}
+
+.hm-chart-title{
+  font-size:18px;
+  font-weight:800;
+  color:#0f172a;
+  margin: 6px 0 14px;
+}
+
+.hm-chart-divider{
+  height: 26px;
+}
+
+/* CANVAS AREA (background halus seperti contoh) */
+.hm-chart-canvas{
+  background: #f8fafc;
+  border-radius: 14px;
+  padding: 18px 18px 10px;
+  border: 1px solid rgba(226,232,240,0.9);
+  height: 320px;               /* ini yang bikin chart tinggi seperti desain */
+}
+
+.hm-chart-loading,
+.hm-chart-empty{
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px dashed rgba(148,163,184,0.55);
+  color: #64748b;
+  text-align: center;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+/* responsive */
+@media (max-width: 768px){
+  .hm-hero-title{ font-size:18px; }
+  .hm-chart-canvas{ height: 280px; }
+}

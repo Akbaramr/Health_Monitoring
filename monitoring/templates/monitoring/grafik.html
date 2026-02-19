@@ -3,110 +3,273 @@
 {% block title %}Grafik | Health Monitor{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <div>
-        <h1 class="h3 fw-bold">Grafik 20 Data Terakhir</h1>
-        <p class="text-muted">Perangkat: {% if active_device %}{{ active_device.display_name }}{% else %}-{% endif %}</p>
+
+<!-- HERO CARD (seperti desain impian) -->
+<div class="hm-hero-card">
+  <div class="hm-hero-icon">
+    <i class="bi bi-graph-up-arrow"></i>
+  </div>
+  <div class="hm-hero-text">
+    <div class="hm-hero-title">Grafik Visualisasi Data</div>
+    <div class="hm-hero-subtitle">
+      Monitoring tren perubahan nilai detak jantung dan suhu tubuh terhadap waktu
     </div>
+  </div>
 </div>
 
 {% if not active_device %}
-<div class="card">
+  <div class="card">
     <div class="card-body text-center">
-        <h5 class="fw-semibold mb-2">Belum ada perangkat aktif</h5>
-        <p class="text-muted mb-3">Silakan pilih perangkat terlebih dahulu untuk melihat grafik data.</p>
-        <a class="btn btn-primary" href="#" onclick="openDeviceModal()">Pilih Perangkat</a>
+      <h5 class="fw-semibold mb-2">Belum ada perangkat aktif</h5>
+      <p class="text-muted mb-3">Silakan pilih perangkat terlebih dahulu untuk melihat grafik data.</p>
+      <a class="btn btn-primary" href="#" onclick="openDeviceModal()">Pilih Perangkat</a>
     </div>
-</div>
+  </div>
 {% else %}
-<div class="card">
+
+  <!-- WRAPPER CARD: 2 chart -->
+  <div class="hm-chart-wrap card">
     <div class="card-body">
-        <div id="chartEmpty" class="empty-state" style="display:none;">
-            Belum ada data cukup untuk ditampilkan.
+
+      <!-- CHART 1: Denyut Jantung -->
+      <div class="hm-chart-block">
+        <div class="hm-chart-title">Grafik Denyut Jantung</div>
+
+        <div id="hrLoading" class="hm-chart-loading">Memuat data...</div>
+        <div id="hrEmpty" class="hm-chart-empty" style="display:none;">
+          Belum ada data cukup untuk ditampilkan.
         </div>
-        <canvas id="healthChart" height="120"></canvas>
+
+        <div class="hm-chart-canvas">
+          <canvas id="heartChart"></canvas>
+        </div>
+      </div>
+
+      <div class="hm-chart-divider"></div>
+
+      <!-- CHART 2: Suhu Tubuh -->
+      <div class="hm-chart-block">
+        <div class="hm-chart-title">Grafik Suhu Tubuh</div>
+
+        <div id="tempLoading" class="hm-chart-loading">Memuat data...</div>
+        <div id="tempEmpty" class="hm-chart-empty" style="display:none;">
+          Belum ada data cukup untuk ditampilkan.
+        </div>
+
+        <div class="hm-chart-canvas">
+          <canvas id="tempChart"></canvas>
+        </div>
+      </div>
+
     </div>
-</div>
+  </div>
+
 {% endif %}
 {% endblock %}
+
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
-    const emptyEl = document.getElementById('chartEmpty');
-    const canvas = document.getElementById('healthChart');
+  // aman untuk editor + aman untuk Django
+  const HAS_DEVICE = "{{ active_device|yesno:'true,false' }}" === "true";
+  const API_RECORDS_URL = "{% url 'api_records' %}?limit=20";
 
-    {% if active_device %}
-    const apiRecordsUrl = "{% url 'api_records' %}?limit=20";
+  let heartChartInstance = null;
+  let tempChartInstance  = null;
 
-    async function loadChart() {
-        const res = await fetch(apiRecordsUrl, {credentials: 'same-origin'});
-        if (!res.ok) {
-            // Handle error but still show empty state
-            emptyEl.style.display = 'block';
-            canvas.style.display = 'none';
-            return;
-        }
-        const payload = await res.json();
-        const records = payload.records || [];
+  const el = (id) => document.getElementById(id);
 
-        if (records.length < 2) {
-            emptyEl.style.display = 'block';
-            canvas.style.display = 'none';
-            return;
-        }
+  function setState(which, state) {
+    // state: 'loading' | 'empty' | 'ready'
+    if (which === 'hr') {
+      const loading = el('hrLoading');
+      const empty   = el('hrEmpty');
+      const canvas  = el('heartChart');
+      if (!loading || !empty || !canvas) return;
 
-        const labels = records.map(item => item.timestamp_label);
-        const bpmData = records.map(item => item.heart_rate_bpm);
-        const tempData = records.map(item => item.body_temp_c);
+      loading.style.display = (state === 'loading') ? 'block' : 'none';
+      empty.style.display   = (state === 'empty')   ? 'block' : 'none';
+      canvas.style.display  = (state === 'ready')   ? 'block' : 'none';
+    } else {
+      const loading = el('tempLoading');
+      const empty   = el('tempEmpty');
+      const canvas  = el('tempChart');
+      if (!loading || !empty || !canvas) return;
 
-        const ctx = canvas.getContext('2d');
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Denyut Jantung (BPM)',
-                        data: bpmData,
-                        borderColor: '#00897b',
-                        backgroundColor: 'rgba(0, 137, 123, 0.15)',
-                        tension: 0.3,
-                        yAxisID: 'y',
-                    },
-                    {
-                        label: 'Suhu Tubuh (C)',
-                        data: tempData,
-                        borderColor: '#ef6c00',
-                        backgroundColor: 'rgba(239, 108, 0, 0.15)',
-                        tension: 0.3,
-                        yAxisID: 'y1',
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                interaction: {mode: 'index', intersect: false},
-                scales: {
-                    y: {
-                        position: 'left',
-                        title: {display: true, text: 'BPM'}
-                    },
-                    y1: {
-                        position: 'right',
-                        grid: {drawOnChartArea: false},
-                        title: {display: true, text: 'C'}
-                    }
-                }
-            }
-        });
+      loading.style.display = (state === 'loading') ? 'block' : 'none';
+      empty.style.display   = (state === 'empty')   ? 'block' : 'none';
+      canvas.style.display  = (state === 'ready')   ? 'block' : 'none';
     }
+  }
 
-    loadChart();
-    {% else %}
-    // Show empty state when no active device
-    emptyEl.style.display = 'block';
-    canvas.style.display = 'none';
-    {% endif %}
+  function buildCommonOptions({ yTickSuffix }) {
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          position: 'top',
+          align: 'center',
+          labels: {
+            usePointStyle: true,
+            pointStyle: 'circle',
+            boxWidth: 10,
+            padding: 18
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(15,23,42,0.92)',
+          padding: 12
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            maxRotation: 45,
+            minRotation: 45,
+            color: '#64748b'
+          }
+        },
+        y: {
+          beginAtZero: false,
+          grid: { color: 'rgba(148,163,184,0.25)' },
+          ticks: {
+            color: '#64748b',
+            callback: (v) => `${v} ${yTickSuffix}`
+          }
+        }
+      }
+    };
+  }
+
+  async function loadCharts() {
+    if (!HAS_DEVICE) return;
+
+    // set loading state di awal
+    setState('hr', 'loading');
+    setState('temp', 'loading');
+
+    try {
+      const res = await fetch(API_RECORDS_URL, { credentials: 'same-origin' });
+      if (!res.ok) {
+        setState('hr', 'empty');
+        setState('temp', 'empty');
+        return;
+      }
+
+      const payload = await res.json();
+      let records = payload.records || [];
+
+      // timeline dari lama -> terbaru
+      records = records.slice().reverse();
+
+      if (records.length < 2) {
+        setState('hr', 'empty');
+        setState('temp', 'empty');
+        return;
+      }
+
+      const labels   = records.map(x => x.timestamp_label ?? '-');
+      const bpmData  = records.map(x => Number(x.heart_rate_bpm ?? 0));
+      const tempData = records.map(x => Number(x.body_temp_c ?? 0));
+
+      // =====================
+      // Chart 1: Heart Rate
+      // =====================
+      const heartCanvas = el('heartChart');
+      if (!heartCanvas) return;
+
+      if (heartChartInstance) heartChartInstance.destroy();
+      heartChartInstance = new Chart(heartCanvas.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Denyut Jantung (BPM)',
+            data: bpmData,
+            borderWidth: 3,
+            tension: 0.35,
+            fill: true,
+            pointRadius: 4,
+            pointHoverRadius: 5,
+            borderColor: '#ef4444',
+            backgroundColor: 'rgba(239,68,68,0.10)',
+            pointBackgroundColor: '#ef4444',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2
+          }]
+        },
+        options: {
+          ...buildCommonOptions({ yTickSuffix: 'BPM' }),
+          plugins: {
+            ...buildCommonOptions({ yTickSuffix: 'BPM' }).plugins,
+            tooltip: {
+              ...buildCommonOptions({ yTickSuffix: 'BPM' }).plugins.tooltip,
+              callbacks: {
+                label: (ctx) => ` ${ctx.parsed.y} BPM`
+              }
+            }
+          }
+        }
+      });
+
+      setState('hr', 'ready');
+
+      // =====================
+      // Chart 2: Temperature
+      // =====================
+      const tempCanvas = el('tempChart');
+      if (!tempCanvas) return;
+
+      if (tempChartInstance) tempChartInstance.destroy();
+      tempChartInstance = new Chart(tempCanvas.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Suhu Tubuh (°C)',
+            data: tempData,
+            borderWidth: 3,
+            tension: 0.35,
+            fill: true,
+            pointRadius: 4,
+            pointHoverRadius: 5,
+            borderColor: '#f97316',
+            backgroundColor: 'rgba(249,115,22,0.10)',
+            pointBackgroundColor: '#f97316',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2
+          }]
+        },
+        options: {
+          ...buildCommonOptions({ yTickSuffix: '°C' }),
+          plugins: {
+            ...buildCommonOptions({ yTickSuffix: '°C' }).plugins,
+            tooltip: {
+              ...buildCommonOptions({ yTickSuffix: '°C' }).plugins.tooltip,
+              callbacks: {
+                label: (ctx) => ` ${Number(ctx.parsed.y).toFixed(1)} °C`
+              }
+            }
+          }
+        }
+      });
+
+      setState('temp', 'ready');
+
+    } catch (e) {
+      console.error(e);
+      setState('hr', 'empty');
+      setState('temp', 'empty');
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', loadCharts);
+
+  // OPTIONAL realtime
+  // setInterval(loadCharts, 5000);
 </script>
 {% endblock %}
