@@ -24,9 +24,15 @@ def classify_temp_status(temp_c):
 
 
 def classify_overall_status(heart_status, temp_status):
-    if heart_status == 'Normal' and temp_status == 'Normal':
-        return 'Normal'
-    return 'Kritis'
+    heart_normal = heart_status == 'Normal'
+    temp_normal = temp_status == 'Normal'
+    
+    if heart_normal and temp_normal:
+        return 'Sehat'
+    elif not heart_normal and not temp_normal:
+        return 'Bahaya'
+    else:
+        return 'Waspada'
 
 
 def is_reading_valid(bpm, temp_c):

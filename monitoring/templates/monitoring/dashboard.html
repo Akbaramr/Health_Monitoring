@@ -3,78 +3,99 @@
 {% block title %}Dashboard | Health Monitor{% endblock %}
 
 {% block content %}
-<!-- Panel Informasi Dashboard -->
-<div class="page-header mb-4">
-    <div>
-        <h1 class="h3 fw-bold">Dashboard Monitoring Real-time</h1>
-        <p class="text-muted">Pemantauan kesehatan secara langsung dari sensor IoT.</p>
-    </div>
-</div>
-
 {% if not active_device %}
-<div class="card">
-    <div class="card-body text-center">
-        <h5 class="fw-semibold mb-2">Belum ada perangkat aktif</h5>
-        <p class="text-muted mb-3">Silakan pilih perangkat dulu untuk melihat data monitoring.</p>
-        <a class="btn btn-primary" href="{% url 'device_select' %}">Pilih Perangkat</a>
+<div class="dashboard-header-card text-center">
+    <div class="metric-icon-wrapper heart mx-auto" style="width: 80px; height: 80px;">
+        <i class="fas fa-heartbeat" style="font-size: 40px;"></i>
     </div>
+    <h5 class="fw-semibold mb-2 mt-3">Belum ada perangkat aktif</h5>
+    <p class="text-muted mb-3">Silakan pilih perangkat dulu untuk melihat data monitoring.</p>
+    <a class="btn btn-save-data" href="{% url 'device_select' %}">
+        <i class="fas fa-phone"></i>
+        <span>Pilih Perangkat</span>
+    </a>
 </div>
 {% else %}
-<!-- Status Koneksi & Tombol Simpan Data -->
-<div class="row mb-3">
-    <div class="col-md-6">
-        <div class="d-flex align-items-center">
-            <span class="me-2">Status Koneksi:</span>
-            <span id="connectionStatus" class="badge">-</span>
-        </div>
-    </div>
-    <div class="col-md-6 text-end">
-        <button class="btn btn-success" id="saveBtn" disabled>Simpan Data</button>
-    </div>
-</div>
-
-<!-- Kartu Denyut Jantung -->
-<div class="card mb-3">
-    <div class="card-body text-center">
-        <i class="fas fa-heartbeat text-danger fs-1 mb-2"></i>
-        <h5 class="card-title">Denyut Jantung</h5>
-        <h2 class="card-text" id="hrValue">-- BPM</h2>
-        <p class="text-muted">Rentang normal: 60–100 BPM</p>
-        <span class="badge" id="hrStatus">-</span>
-    </div>
-</div>
-
-<!-- Kartu Suhu Tubuh -->
-<div class="card mb-3">
-    <div class="card-body text-center">
-        <i class="fas fa-thermometer-half text-primary fs-1 mb-2"></i>
-        <h5 class="card-title">Suhu Tubuh</h5>
-        <h2 class="card-text" id="tempValue">-- °C</h2>
-        <p class="text-muted">Rentang normal: 36.0–37.5 °C</p>
-        <span class="badge" id="tempStatus">-</span>
-    </div>
-</div>
-
-<!-- Panel Status Kondisi Kesehatan -->
-<div class="card mb-4">
-    <div class="card-body">
-        <div class="d-flex align-items-center">
-            <i id="statusIcon" class="fas fa-check-circle text-success fs-2 me-2"></i>
-            <h4 class="card-title mb-0" id="overallStatusTitle">Status: Normal</h4>
-        </div>
-        <p class="mt-2 mb-0" id="overallStatusDesc">Parameter kesehatan menunjukkan kondisi normal.</p>
-    </div>
-</div>
-
-<!-- Status Pembacaan -->
-<div class="card mt-4">
-    <div class="card-body d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+<!-- Dashboard Header -->
+<div class="dashboard-header-card">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
         <div>
-            <div class="fw-semibold">Status pembacaan</div>
-            <div class="small text-muted" id="readingHint">Belum ada data masuk.</div>
-            <div class="small text-danger" id="validHint" style="display:none;">Data belum valid.</div>
+            <h1 class="dashboard-title">Dashboard Monitoring Real-time</h1>
+            <p class="dashboard-subtitle">Pemantauan kesehatan secara langsung dari sensor IoT</p>
+        </div>
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <span id="connectionStatus" class="connection-badge offline">
+                <i class="fas fa-wifi"></i>
+                <span>Offline</span>
+            </span>
+            <button class="btn-save-data" id="saveBtn" disabled>
+                <i class="fas fa-database"></i>
+                <span>Simpan Data</span>
+            </button>
         </div>
     </div>
+</div>
+
+<!-- Metric Cards Row -->
+<div class="row g-4 mb-4">
+    <!-- Denyut Jantung Card -->
+    <div class="col-md-6">
+        <div class="metric-card normal" id="heartCard">
+            <div class="metric-icon-wrapper heart">
+                <i class="fas fa-heart metric-icon heart"></i>
+            </div>
+            <div class="metric-label">Denyut Jantung</div>
+            <div class="metric-value">
+                <span id="hrValue">--</span>
+                <span class="metric-unit">BPM</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <span class="metric-normal-range">Normal: 60-100 BPM</span>
+                <span id="hrStatus" class="metric-status-badge normal">-</span>
+            </div>
+            <div class="monitoring-indicator" id="monitoringIndicator" style="display: none;">
+                <span class="monitoring-dot"></span>
+                <span>Monitoring...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Suhu Tubuh Card -->
+    <div class="col-md-6">
+        <div class="metric-card normal" id="tempCard">
+            <div class="metric-icon-wrapper temp">
+                <i class="fas fa-thermometer-half metric-icon temp"></i>
+            </div>
+            <div class="metric-label">Suhu Tubuh</div>
+            <div class="metric-value">
+                <span id="tempValue">--</span>
+                <span class="metric-unit">°C</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <span class="metric-normal-range">Normal: 36.0-37.5 °C</span>
+                <span id="tempStatus" class="metric-status-badge normal">-</span>
+            </div>
+            <div class="monitoring-indicator" id="tempMonitoringIndicator" style="display: none;">
+                <span class="monitoring-dot"></span>
+                <span>Monitoring...</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status Panel -->
+<div class="status-panel sehat" id="statusPanel">
+    <div class="status-header">
+        <i class="fas fa-check-circle" id="statusIcon" style="color: #166534;"></i>
+        <h4 class="status-title sehat" id="overallStatusTitle">Status: ✅ Sehat</h4>
+    </div>
+    <p class="status-description" id="overallStatusDesc">Semua parameter kesehatan normal.</p>
+</div>
+
+<!-- Reading Status -->
+<div class="reading-status-card">
+    <div class="reading-label">Status pembacaan</div>
+    <div class="reading-hint" id="readingHint">Belum ada data masuk.</div>
 </div>
 {% endif %}
 {% endblock %}
@@ -92,20 +113,67 @@
         return '';
     }
 
-    function setBadge(el, text, status) {
-        el.textContent = text || '-';
-        el.className = 'badge'; // Reset classes
+    function getStatusClass(status) {
+        if (!status || status === '-') return 'sehat';
+        const lowerStatus = status.toLowerCase();
+        if (lowerStatus.includes('bahaya')) return 'bahaya';
+        if (lowerStatus.includes('waspada')) return 'waspada';
+        if (lowerStatus.includes('sehat') || lowerStatus.includes('normal')) return 'sehat';
+        return 'waspada';
+    }
 
-        if (status === 'Normal') {
-            el.classList.add('text-bg-success');
-        } else if (status === 'Kritis' || status.includes('Kritis')) {
-            el.classList.add('text-bg-danger');
-        } else if (status === 'Offline') {
-            el.classList.add('text-bg-secondary');
-        } else if (text && text !== '-' && text !== 'Offline') {
-            el.classList.add('text-bg-warning');
+    function updateMetricCard(cardId, status) {
+        const card = document.getElementById(cardId);
+        const statusClass = getStatusClass(status);
+        
+        card.classList.remove('normal', 'critical', 'warning', 'sehat', 'waspada', 'bahaya');
+        if (statusClass === 'bahaya') {
+            card.classList.add('bahaya');
+        } else if (statusClass === 'waspada') {
+            card.classList.add('waspada');
         } else {
-            el.classList.add('text-bg-secondary');
+            card.classList.add('sehat');
+        }
+    }
+
+    function updateStatusBadge(badgeId, status) {
+        const badge = document.getElementById(badgeId);
+        const statusClass = getStatusClass(status);
+        
+        badge.classList.remove('normal', 'critical', 'warning', 'sehat', 'waspada', 'bahaya');
+        badge.classList.add(statusClass);
+        badge.textContent = status || '-';
+    }
+
+    function updateOverallStatus(status) {
+        const statusPanel = document.getElementById('statusPanel');
+        const statusIcon = document.getElementById('statusIcon');
+        const statusTitle = document.getElementById('overallStatusTitle');
+        const statusDesc = document.getElementById('overallStatusDesc');
+
+        const statusClass = getStatusClass(status);
+
+        statusPanel.classList.remove('sehat', 'waspada', 'bahaya', 'normal', 'critical', 'warning');
+        statusPanel.classList.add(statusClass);
+
+        if (statusClass === 'bahaya') {
+            statusIcon.className = 'fas fa-exclamation-triangle';
+            statusIcon.style.color = '#991b1b';
+            statusTitle.className = 'status-title bahaya';
+            statusTitle.textContent = 'Status: ⚠️ Bahaya';
+            statusDesc.textContent = 'Kedua parameter kesehatan tidak normal. Segera konsultasi medis.';
+        } else if (statusClass === 'waspada') {
+            statusIcon.className = 'fas fa-exclamation-circle';
+            statusIcon.style.color = '#92400e';
+            statusTitle.className = 'status-title waspada';
+            statusTitle.textContent = 'Status: ⚠️ Waspada';
+            statusDesc.textContent = 'Salah satu parameter kesehatan tidak normal. Pantau terus kondisi Anda.';
+        } else {
+            statusIcon.className = 'fas fa-check-circle';
+            statusIcon.style.color = '#166534';
+            statusTitle.className = 'status-title sehat';
+            statusTitle.textContent = 'Status: ✅ Sehat';
+            statusDesc.textContent = 'Semua parameter kesehatan normal.';
         }
     }
 
@@ -114,62 +182,53 @@
         const tempValue = document.getElementById('tempValue');
         const hrStatus = document.getElementById('hrStatus');
         const tempStatus = document.getElementById('tempStatus');
-        const overallStatusTitle = document.getElementById('overallStatusTitle');
-        const overallStatusDesc = document.getElementById('overallStatusDesc');
-        const statusIcon = document.getElementById('statusIcon');
         const connectionStatus = document.getElementById('connectionStatus');
         const readingHint = document.getElementById('readingHint');
-        const validHint = document.getElementById('validHint');
         const saveBtn = document.getElementById('saveBtn');
+        const monitoringIndicator = document.getElementById('monitoringIndicator');
+        const tempMonitoringIndicator = document.getElementById('tempMonitoringIndicator');
 
         if (!data.last_reading_time) {
-            hrValue.textContent = '-- BPM';
-            tempValue.textContent = '-- °C';
-            setBadge(hrStatus, '-', null);
-            setBadge(tempStatus, '-', null);
-            overallStatusTitle.textContent = 'Status: -';
-            overallStatusDesc.textContent = 'Belum ada data masuk.';
-            statusIcon.className = 'fas fa-question-circle text-secondary fs-2 me-2';
+            hrValue.textContent = '--';
+            tempValue.textContent = '--';
+            updateStatusBadge('hrStatus', '-');
+            updateStatusBadge('tempStatus', '-');
+            updateOverallStatus('-');
             readingHint.textContent = 'Belum ada data masuk.';
-            validHint.style.display = 'none';
+            monitoringIndicator.style.display = 'none';
+            tempMonitoringIndicator.style.display = 'none';
             saveBtn.disabled = true;
         } else {
-            hrValue.textContent = data.heart_rate_bpm !== null ? data.heart_rate_bpm.toFixed(0) + ' BPM' : '-- BPM';
-            tempValue.textContent = data.body_temp_c !== null ? data.body_temp_c.toFixed(1) + ' °C' : '-- °C';
-            setBadge(hrStatus, data.heart_status, data.heart_status);
-            setBadge(tempStatus, data.temp_status, data.temp_status);
-
-            // Update overall status
-            if (data.overall_status === 'Normal') {
-                overallStatusTitle.textContent = 'Status: Normal';
-                overallStatusDesc.textContent = 'Parameter kesehatan menunjukkan kondisi normal.';
-                statusIcon.className = 'fas fa-check-circle text-success fs-2 me-2';
-            } else {
-                overallStatusTitle.textContent = 'Status: Kritis';
-                overallStatusDesc.textContent = 'Parameter kesehatan menunjukkan kondisi kritis. Segera konsultasi medis.';
-                statusIcon.className = 'fas fa-exclamation-triangle text-danger fs-2 me-2';
-            }
-
-            setBadge(statusIcon.parentElement.previousElementSibling, data.overall_status, data.overall_status);
+            hrValue.textContent = data.heart_rate_bpm !== null ? data.heart_rate_bpm.toFixed(0) : '--';
+            tempValue.textContent = data.body_temp_c !== null ? data.body_temp_c.toFixed(1) : '--';
+            
+            updateStatusBadge('hrStatus', data.heart_status);
+            updateStatusBadge('tempStatus', data.temp_status);
+            
+            updateMetricCard('heartCard', data.heart_status);
+            updateMetricCard('tempCard', data.temp_status);
+            
+            updateOverallStatus(data.overall_status);
 
             if (data.last_reading_time !== lastReadingTime) {
                 readingHint.textContent = 'Data terbaru diterima.';
                 lastReadingTime = data.last_reading_time;
+                monitoringIndicator.style.display = 'flex';
+                tempMonitoringIndicator.style.display = 'flex';
             } else {
                 readingHint.textContent = 'Menunggu pembacaan berikutnya...';
             }
 
-            validHint.style.display = data.is_valid ? 'none' : 'block';
             saveBtn.disabled = !data.can_save;
         }
 
         // Update connection status
         if (data.connection === 'connected') {
-            connectionStatus.textContent = 'Terhubung';
-            connectionStatus.className = 'badge text-bg-success';
+            connectionStatus.className = 'connection-badge connected';
+            connectionStatus.innerHTML = '<i class="fas fa-wifi"></i><span>Terhubung</span>';
         } else {
-            connectionStatus.textContent = 'Offline';
-            connectionStatus.className = 'badge text-bg-danger';
+            connectionStatus.className = 'connection-badge offline';
+            connectionStatus.innerHTML = '<i class="fas fa-wifi"></i><span>Offline</span>';
         }
     }
 
@@ -203,9 +262,6 @@
 
     {% if active_device %}
     document.getElementById('saveBtn').addEventListener('click', saveLatest);
-    {% else %}
-    // Disable save button if no active device
-    document.getElementById('saveBtn').disabled = true;
     {% endif %}
 
     // Fetch data periodically if active device exists

@@ -3,92 +3,69 @@
 {% block title %}Histori | Health Monitor{% endblock %}
 
 {% block content %}
-<div class="page-header">
+<!-- Header Card -->
+<div class="histori-header-card">
+    <div class="histori-header-icon">
+        <i class="bi bi-clock-history"></i>
+    </div>
     <div>
-        <h1 class="h3 fw-bold">Histori Pengukuran</h1>
-        <p class="text-muted">Daftar data pengukuran perangkat aktif.</p>
+        <h1 class="histori-header-title">Histori Data Kesehatan</h1>
+        <p class="histori-header-subtitle">Riwayat pengukuran yang telah disimpan untuk analisis kesehatan</p>
     </div>
 </div>
 
-<div class="card mb-3">
-    <div class="card-body">
-        <form class="row g-2 align-items-end" method="get">
-            <div class="col-md-4">
-                <label class="form-label">Dari tanggal</label>
-                <input type="date" name="from" value="{{ from_date }}" class="form-control">
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">Sampai tanggal</label>
-                <input type="date" name="to" value="{{ to_date }}" class="form-control">
-            </div>
-            <div class="col-md-4">
-                <button class="btn btn-primary" type="submit">Filter</button>
-                <a class="btn btn-outline-secondary" href="{% url 'histori' %}">Reset</a>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div class="card">
-    <div class="card-body table-responsive">
-        <table class="table align-middle">
+<!-- Table Card -->
+<div class="histori-table-card">
+    <div class="table-responsive">
+        <table class="histori-table">
             <thead>
                 <tr>
-                    <th>No</th>
-                    <th>Waktu Pengukuran</th>
-                    <th>Denyut Jantung (BPM)</th>
-                    <th>Status Denyut</th>
-                    <th>Suhu Tubuh (C)</th>
-                    <th>Status Suhu</th>
-                    <th>Status Kondisi</th>
+                    <th>Waktu</th>
+                    <th>Denyut Jantung</th>
+                    <th>Suhu Tubuh</th>
+                    <th>Status</th>
                 </tr>
             </thead>
             <tbody>
-                {% for record in page_obj %}
-                    <tr>
-                        <td>{{ forloop.counter }}</td>
-                        <td>{{ record.timestamp }}</td>
-                        <td>{{ record.heart_rate_bpm|floatformat:0 }}</td>
-                        <td><span class="badge status-badge {{ record.heart_status|lower }}">{{ record.heart_status }}</span></td>
-                        <td>{{ record.body_temp_c|floatformat:1 }}</td>
-                        <td><span class="badge status-badge {{ record.temp_status|lower }}">{{ record.temp_status }}</span></td>
-                        <td>
-                            <span class="badge {% if record.overall_status == 'Normal' %}text-bg-success{% else %}text-bg-danger{% endif %}">{{ record.overall_status }}</span>
-                        </td>
-                    </tr>
+                {% for record in records %}
+                <tr>
+                    <td>
+                        <span class="histori-time">{{ record.timestamp|date:"d/n/Y, H.i.s" }}</span>
+                    </td>
+                    <td>
+                        <span class="histori-value {% if record.heart_status == 'Normal' %}hv-normal{% elif record.heart_status == 'Bradykardia' or record.heart_status == 'Takikardia' %}hv-bahaya{% else %}hv-waspada{% endif %}">
+                            {{ record.heart_rate_bpm|floatformat:0 }} BPM
+                        </span>
+                    </td>
+                    <td>
+                        <span class="histori-value {% if record.temp_status == 'Normal' %}hv-normal{% elif record.temp_status == 'Hipotermia' or record.temp_status == 'Hipertermia' %}hv-bahaya{% else %}hv-waspada{% endif %}">
+                            {{ record.body_temp_c|floatformat:1 }} °C
+                        </span>
+                    </td>
+                    <td>
+                        <span class="status-pill {% if record.overall_status == 'Sehat' or record.overall_status == 'Normal' %}sp-sehat{% elif record.overall_status == 'Waspada' %}sp-waspada{% else %}sp-bahaya{% endif %}">
+                            {% if record.overall_status == 'Sehat' or record.overall_status == 'Normal' %}Sehat{% elif record.overall_status == 'Waspada' %}Waspada{% else %}Bahaya{% endif %}
+                        </span>
+                    </td>
+                </tr>
                 {% empty %}
-                    <tr>
-                        <td colspan="7" class="text-center text-muted">
-                            {% if active_device %}
-                                Belum ada data histori.
-                            {% else %}
-                                Belum ada perangkat aktif. Silakan pilih perangkat terlebih dahulu.
-                            {% endif %}
-                        </td>
-                    </tr>
+                <tr>
+                    <td colspan="4" class="text-center">
+                        {% if active_device %}
+                            <p class="text-muted mb-0">Belum ada data histori.</p>
+                        {% else %}
+                            <p class="text-muted mb-0">Belum ada perangkat aktif. Silakan pilih perangkat terlebih dahulu.</p>
+                        {% endif %}
+                    </td>
+                </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+    
+    <!-- Footer: Total Data -->
+    <div class="histori-footer">
+        Total data tersimpan: {{ records|length }} record
+    </div>
 </div>
-
-{% if page_obj and page_obj.paginator.num_pages > 1 %}
-    <nav class="mt-3">
-        <ul class="pagination">
-            {% if page_obj.has_previous %}
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{{ query_params }}">Sebelumnya</a></li>
-            {% else %}
-                <li class="page-item disabled"><span class="page-link">Sebelumnya</span></li>
-            {% endif %}
-
-            <li class="page-item disabled"><span class="page-link">Halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}</span></li>
-
-            {% if page_obj.has_next %}
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{{ query_params }}">Berikutnya</a></li>
-            {% else %}
-                <li class="page-item disabled"><span class="page-link">Berikutnya</span></li>
-            {% endif %}
-        </ul>
-    </nav>
-{% endif %}
 {% endblock %}

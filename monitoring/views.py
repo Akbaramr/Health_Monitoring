@@ -3,7 +3,6 @@
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -86,42 +85,18 @@ def grafik(request):
 @login_required
 def histori(request):
     device = get_active_device(request)
-    
+
     if device:
-        records = HealthRecord.objects.filter(device=device).order_by('-timestamp')
-
-        from_date = request.GET.get('from', '')
-        to_date = request.GET.get('to', '')
-
-        if from_date:
-            records = records.filter(timestamp__date__gte=from_date)
-        if to_date:
-            records = records.filter(timestamp__date__lte=to_date)
-
-        paginator = Paginator(records, 10)
-        page_number = request.GET.get('page')
-        page_obj = paginator.get_page(page_number)
-
-        query_params = ''
-        if from_date:
-            query_params += f'&from={from_date}'
-        if to_date:
-            query_params += f'&to={to_date}'
-
+        records = HealthRecord.objects.filter(device=device).order_by('-timestamp')[:20]
+        records = list(reversed(records))
         context = {
-            'page_obj': page_obj,
-            'from_date': from_date,
-            'to_date': to_date,
-            'query_params': query_params,
+            'records': records,
         }
     else:
         context = {
-            'page_obj': None,
-            'from_date': '',
-            'to_date': '',
-            'query_params': '',
+            'records': [],
         }
-    
+
     return render(request, 'monitoring/histori.html', context)
 
 
