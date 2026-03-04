@@ -57,13 +57,13 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'health_monitoring.wsgi.application'
 
-# Database configuration untuk PythonAnywhere MySQL
+# Database configuration untuk PythonAnywhere PostgreSQL
 if os.environ.get('PYTHONANYWHERE'):
     # Production (PythonAnywhere)
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'HOST': os.environ.get('DB_HOST', 'yourusername.mysql.pythonanywhere-services.com'),
+            'ENGINE': 'django.db.backends.postgresql',
+            'HOST': os.environ.get('DB_HOST', 'yourusername.db.pythonanywhere-services.com'),
             'NAME': os.environ.get('DB_NAME', 'yourusername$default'),
             'USER': os.environ.get('DB_USER', 'yourusername'),
             'PASSWORD': os.environ.get('DB_PASSWORD', ''),
