@@ -32,16 +32,9 @@ def get_active_device(request):
 
 @login_required
 def device_select(request):
-    devices = Device.objects.filter(user=request.user).order_by('id')
-
-    if request.method == 'POST':
-        device_id = request.POST.get('device_id')
-        device = devices.filter(id=device_id).first()
-        if device:
-            request.session['active_device_id'] = device.id
-            return redirect('dashboard')
-
-    return render(request, 'monitoring/device_select.html', {'devices': devices})
+    # Redirect ke dashboard dengan parameter untuk buka modal
+    from django.shortcuts import redirect
+    return redirect('dashboard')
 
 
 @login_required
@@ -57,6 +50,11 @@ def device_add(request):
                     messages.warning(request, 'Perangkat sudah terdaftar pada akun Anda.')
                 else:
                     messages.error(request, 'Kode perangkat sudah digunakan user lain.')
+                
+                # Handle AJAX request
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    from django.http import JsonResponse
+                    return JsonResponse({'success': False, 'error': 'Perangkat sudah terdaftar'}, status=400)
             else:
                 device = Device.objects.create(
                     user=request.user,
@@ -65,7 +63,19 @@ def device_add(request):
                 )
                 request.session['active_device_id'] = device.id
                 messages.success(request, 'Perangkat berhasil ditambahkan.')
+                
+                # Handle AJAX request
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    from django.http import JsonResponse
+                    return JsonResponse({'success': True, 'message': 'Perangkat berhasil ditambahkan'})
+                
                 return redirect('dashboard')
+        else:
+            # Handle AJAX request with form errors
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                from django.http import JsonResponse
+                errors = form.errors.as_json()
+                return JsonResponse({'success': False, 'errors': errors}, status=400)
     else:
         form = DeviceAddForm()
 
@@ -79,25 +89,85 @@ def dashboard(request):
 
 @login_required
 def grafik(request):
-    return render(request, 'monitoring/grafik.html')
+    device = get_active_device(request)
+    all_devices = Device.objects.filter(user=request.user).order_by('-created_at')
+    
+    # Get filter device from query parameter
+    filter_device_id = request.GET.get('device_id')
+    
+    if filter_device_id:
+        filter_device = all_devices.filter(id=filter_device_id).first()
+        if filter_device:
+            request.session['active_device_id'] = filter_device.id
+            device = filter_device
+    else:
+        filter_device = device
+    
+    context = {
+        'active_device': device,
+        'all_devices': all_devices,
+        'filter_device': filter_device,
+    }
+    
+    return render(request, 'monitoring/grafik.html', context)
 
 
 @login_required
 def histori(request):
     device = get_active_device(request)
-
-    if device:
+    all_devices = Device.objects.filter(user=request.user).order_by('-created_at')
+    
+    # Get filter device from query parameter
+    filter_device_id = request.GET.get('device_id')
+    
+    if filter_device_id:
+        # Filter by selected device
+        filter_device = all_devices.filter(id=filter_device_id).first()
+        if filter_device:
+            records = HealthRecord.objects.filter(device=filter_device).order_by('-timestamp')[:20]
+        else:
+            filter_device = None
+            records = []
+    elif device:
+        # Use active device
+        filter_device = device
         records = HealthRecord.objects.filter(device=device).order_by('-timestamp')[:20]
-        records = list(reversed(records))
-        context = {
-            'records': records,
-        }
     else:
-        context = {
-            'records': [],
-        }
+        filter_device = None
+        records = []
+    
+    context = {
+        'records': records,
+        'all_devices': all_devices,
+        'filter_device': filter_device,
+    }
 
     return render(request, 'monitoring/histori.html', context)
+
+
+@login_required
+def histori_delete(request, record_id):
+    from django.http import JsonResponse
+    from .models import HealthRecord
+
+    if request.method == 'POST':
+        if not request.user.is_authenticated:
+            return JsonResponse({'success': False, 'error': 'User tidak terautentikasi'})
+
+        device = get_active_device(request)
+        if not device:
+            return JsonResponse({'success': False, 'error': 'Tidak ada perangkat aktif'})
+
+        try:
+            record = HealthRecord.objects.get(id=record_id, device=device)
+            record.delete()
+            return JsonResponse({'success': True})
+        except HealthRecord.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Data tidak ditemukan'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+
+    return JsonResponse({'success': False, 'error': 'Method tidak valid'})
 
 
 def _to_float(value):
@@ -140,7 +210,13 @@ def api_iot_ingest(request):
 
     bpm = _to_float(payload.get('heart_rate_bpm'))
     temp_c = _to_float(payload.get('body_temp_c'))
+    finger_detected = payload.get('finger_detected', False)
+    bpm_frozen = payload.get('bpm_frozen', False)
     reading_time = _parse_timestamp(payload.get('timestamp'))
+
+    # Jika jari tidak terdeteksi dan tidak freeze, set BPM ke None
+    if not finger_detected and not bpm_frozen:
+        bpm = None
 
     heart_status = classify_heart_status(bpm)
     temp_status = classify_temp_status(temp_c)
@@ -155,6 +231,8 @@ def api_iot_ingest(request):
     reading.temp_status = temp_status
     reading.overall_status = overall_status
     reading.is_valid = valid
+    reading.finger_detected = finger_detected
+    reading.bpm_frozen = bpm_frozen
     reading.save()
 
     device.last_seen = timezone.now()
@@ -205,6 +283,8 @@ def api_latest(request):
         'last_seen': device.last_seen.isoformat() if device.last_seen else None,
         'is_valid': reading.is_valid,
         'can_save': can_save,
+        'finger_detected': reading.finger_detected,
+        'bpm_frozen': reading.bpm_frozen,
     })
 
 
@@ -259,9 +339,11 @@ def api_records(request):
 
     data = []
     for record in records:
+        local_time = record.timestamp.astimezone(timezone.get_current_timezone())
+        # Format: HH:MM:SS (jam, menit, dan detik)
         data.append({
-            'timestamp': record.timestamp.isoformat(),
-            'timestamp_label': record.timestamp.strftime('%H:%M:%S'),
+            'timestamp': local_time.isoformat(),
+            'timestamp_label': local_time.strftime('%H:%M:%S'),
             'heart_rate_bpm': record.heart_rate_bpm,
             'body_temp_c': record.body_temp_c,
         })
@@ -286,6 +368,10 @@ def api_devices_list(request):
             'is_active': request.session.get('active_device_id') == device.id,
             'last_seen': device.last_seen.isoformat() if device.last_seen else None,
         })
+    
+    # Debug logging
+    print(f"[api_devices_list] User: {request.user.username}, Devices found: {len(devices_data)}")
+    
     return JsonResponse({'devices': devices_data})
 
 

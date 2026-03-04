@@ -1,0 +1,269 @@
+#include <Wire.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
+
+#include <Adafruit_MLX90614.h>
+#include "MAX30105.h"
+#include "heartRate.h"
+
+/* ====================================================
+ * BAGIAN A - WIFI + SERVER (TIDAK DIUBAH)  ✅ PERSIS
+ * ==================================================== */
+const char* WIFI_SSID = "LAPTOPQ02TM32D9677";     // <-- GANTI
+const char* WIFI_PASS = "1234567899";            // <-- GANTI
+
+const char* SERVER_URL = "http://192.168.137.1:8000/api/iot/ingest/"; // <-- GANTI IP/endpoint
+const char* KODE_PERANGKAT = "ESP32-HM-001";        // <-- GANTI kalau mau
+
+const unsigned long POST_INTERVAL_MS = 1000;     // kirim tiap 1 detik
+unsigned long lastPost = 0;
+
+void connectWiFi() {
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+
+  Serial.print("Menghubungkan WiFi");
+  unsigned long start = millis();
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(400);
+    Serial.print(".");
+    if (millis() - start > 15000) { // 15 detik timeout
+      Serial.println("\nGagal connect WiFi, coba ulang...");
+      start = millis();
+      WiFi.disconnect();
+      WiFi.begin(WIFI_SSID, WIFI_PASS);
+    }
+  }
+  Serial.println("\nWiFi terhubung ✅");
+  Serial.print("IP ESP32: ");
+  Serial.println(WiFi.localIP());
+}
+
+/* =======================
+ * MODIFIKASI: tambah finger_detected & bpm_frozen
+ * ======================= */
+bool postToServer(float bpmSend, float tempSend, bool fingerDetected, bool bpmFrozen) {
+  if (WiFi.status() != WL_CONNECTED) return false;
+
+  HTTPClient http;
+  http.begin(SERVER_URL);
+  http.addHeader("Content-Type", "application/json");
+
+  String payload = "{";
+  payload += "\"kode_perangkat\":\"" + String(KODE_PERANGKAT) + "\",";
+  payload += "\"heart_rate_bpm\":" + String(bpmSend, 1) + ",";
+  payload += "\"body_temp_c\":" + String(tempSend, 2) + ",";
+  payload += "\"finger_detected\":" + String(fingerDetected ? "true" : "false") + ",";
+  payload += "\"bpm_frozen\":" + String(bpmFrozen ? "true" : "false");
+  payload += "}";
+
+  int code = http.POST(payload);
+  String resp = http.getString();
+  http.end();
+
+  Serial.print("POST => ");
+  Serial.print(code);
+  Serial.print(" | ");
+  Serial.println(resp);
+
+  return (code >= 200 && code < 300);
+}
+
+/* ====================================================
+ * BAGIAN B - MLX90614 (ALGORITMA CODE PERTAMA)
+ * ==================================================== */
+Adafruit_MLX90614 mlx = Adafruit_MLX90614();
+
+// Estimasi suhu tubuh sederhana (code pertama)
+float OFFSET_TUBUH = 4.0;
+const float AMB_PATOKAN = 27.0;
+float K_AMBIENT = 0.25;
+
+// EMA filter
+float suhuTubuhFilter = 0.0;
+bool filterInit = false;
+float ALPHA_SUHU = 0.20;
+
+float clampFloat(float x, float lo, float hi) {
+  if (x < lo) return lo;
+  if (x > hi) return hi;
+  return x;
+}
+
+float hitungSuhuTubuhSederhana(float suhuObj, float suhuAmb) {
+  float koreksiAmb = (AMB_PATOKAN - suhuAmb) * K_AMBIENT;
+  float suhuTubuh = suhuObj + OFFSET_TUBUH + koreksiAmb;
+  suhuTubuh = clampFloat(suhuTubuh, 30.0, 42.0);
+  return suhuTubuh;
+}
+
+/* ====================================================
+ * BAGIAN C - MAX30102 (MODIFIKASI: FREEZE TERUS MENERUS)
+ * ==================================================== */
+MAX30105 particleSensor;
+TwoWire I2C_MAX = TwoWire(1);
+
+const unsigned long PRINT_INTERVAL_MS = 1000;
+unsigned long lastPrint = 0;
+
+const long IR_FINGER_THRESHOLD = 8000;
+
+// AVG beat terakhir (seperti code pertama)
+const byte RATE_SIZE = 8;
+byte rates[RATE_SIZE];
+byte rateSpot = 0;
+long lastBeat = 0;
+float bpm = 0;
+int bpmRata2 = 0;
+
+// Freeze BPM TANPA BATAS sampai jari ditempel lagi
+bool prevJariAda = false;
+bool sedangFreeze = false;
+
+void resetBpmState() {
+  bpm = 0;
+  bpmRata2 = 0;
+  lastBeat = 0;
+  rateSpot = 0;
+  for (byte i = 0; i < RATE_SIZE; i++) rates[i] = 0;
+}
+
+/* ====================================================
+ * SETUP
+ * ==================================================== */
+void setup() {
+  Serial.begin(115200);
+  delay(1000);
+
+  // --------- A) WiFi ----------
+  connectWiFi();
+
+  // --------- B) MLX90614 ----------
+  Wire.begin(21, 22);
+  if (!mlx.begin()) {
+    Serial.println("MLX90614 tidak terdeteksi ❌");
+    while (1) delay(10);
+  }
+
+  // --------- C) MAX30102 ----------
+  I2C_MAX.begin(25, 26);
+  if (!particleSensor.begin(I2C_MAX, I2C_SPEED_FAST)) {
+    Serial.println("MAX30102 tidak terdeteksi ❌");
+    while (1) delay(10);
+  }
+
+  // Setting sensor (diambil dari code pertama yang kamu suka)
+  particleSensor.setup(60, 4, 2, 200, 411, 16384);
+  particleSensor.setPulseAmplitudeRed(0x2F);
+  particleSensor.setPulseAmplitudeGreen(0);
+
+  resetBpmState();
+
+  Serial.println("Siap: Algoritma sensor CODE PERTAMA + WiFi/POST CODE KEDUA ✅ (MAX30102 freeze terus)");
+}
+
+/* ====================================================
+ * LOOP
+ * ==================================================== */
+void loop() {
+  // ================== MAX30102 (freeze terus sampai jari balik) ==================
+  long irValue = particleSensor.getIR();
+  bool jariAda = (irValue > IR_FINGER_THRESHOLD);
+
+  // Transisi: jari ada -> jari tidak ada => mulai freeze tanpa batas waktu
+  if (prevJariAda && !jariAda) {
+    sedangFreeze = true;
+  }
+
+  // Transisi: jari tidak ada -> jari ada => keluar freeze, reset, lanjut ukur lagi
+  if (!prevJariAda && jariAda) {
+    sedangFreeze = false;
+    resetBpmState();     // mulai pengukuran fresh
+    lastBeat = millis(); // bantu hindari delta ekstrem di beat pertama
+  }
+
+  if (jariAda) {
+    // Normal ukur saat jari ada
+    if (checkForBeat(irValue)) {
+      long delta = millis() - lastBeat;
+      lastBeat = millis();
+
+      float bpmHitung = 60.0 / (delta / 1000.0);
+
+      if (bpmHitung > 30 && bpmHitung < 220) {
+        bpm = bpmHitung;
+
+        rates[rateSpot++] = (byte)bpm;
+        rateSpot %= RATE_SIZE;
+
+        int total = 0;
+        for (byte i = 0; i < RATE_SIZE; i++) total += rates[i];
+        bpmRata2 = total / RATE_SIZE;
+      }
+    }
+  } else {
+    // Kalau dari awal memang belum ada jari, pastikan 0 (bukan sisa)
+    if (!prevJariAda && !sedangFreeze) {
+      resetBpmState();
+    }
+    // Kalau sedangFreeze == true: biarkan bpm & bpmRata2 tetap terkunci selamanya
+  }
+
+  prevJariAda = jariAda;
+
+  // ================== MLX90614 (code pertama + filter) ==================
+  float suhuObj = mlx.readObjectTempC();
+  float suhuAmb = mlx.readAmbientTempC();
+
+  float suhuTubuh = hitungSuhuTubuhSederhana(suhuObj, suhuAmb);
+
+  if (!filterInit) {
+    suhuTubuhFilter = suhuTubuh;
+    filterInit = true;
+  } else {
+    suhuTubuhFilter = (ALPHA_SUHU * suhuTubuh) + ((1.0 - ALPHA_SUHU) * suhuTubuhFilter);
+  }
+
+  // ================== CETAK (1 detik) ==================
+  if (millis() - lastPrint >= PRINT_INTERVAL_MS) {
+    lastPrint = millis();
+
+    Serial.print("SuhuTubuh: ");
+    Serial.print(suhuTubuhFilter, 2);
+    Serial.print(" C | SuhuAmb: ");
+    Serial.print(suhuAmb, 2);
+    Serial.print(" C | IR: ");
+    Serial.print(irValue);
+
+    if (jariAda) {
+      Serial.print(" | BPM: ");
+      Serial.print(bpm, 1);
+      Serial.print(" | BPM_Rata2: ");
+      Serial.print(bpmRata2);
+    } else if (sedangFreeze) {
+      Serial.print(" | BPM (freeze): ");
+      Serial.print(bpm, 1);
+      Serial.print(" | BPM_Rata2 (freeze): ");
+      Serial.print(bpmRata2);
+      Serial.print(" | (menunggu jari kembali)");
+    } else {
+      Serial.print(" | (Jari tidak terdeteksi)");
+    }
+
+    Serial.println();
+  }
+
+  // ================== KIRIM KE SERVER (code kedua, tapi data stabil) ==================
+  if (millis() - lastPost >= POST_INTERVAL_MS) {
+    lastPost = millis();
+
+    // kirim BPM yang lebih stabil: bpmRata2 (AVG)
+    float bpmToSend = (bpmRata2 > 0) ? (float)bpmRata2 : 0.0f;
+
+    // kirim suhu yang sudah difilter
+    float tempToSend = suhuTubuhFilter;
+
+    // MODIFIKASI: kirim status deteksi jari & status freeze BPM
+    postToServer(bpmToSend, tempToSend, jariAda, sedangFreeze);
+  }
+}

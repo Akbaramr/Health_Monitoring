@@ -3,19 +3,6 @@
 {% block title %}Dashboard | Health Monitor{% endblock %}
 
 {% block content %}
-{% if not active_device %}
-<div class="dashboard-header-card text-center">
-    <div class="metric-icon-wrapper heart mx-auto" style="width: 80px; height: 80px;">
-        <i class="fas fa-heartbeat" style="font-size: 40px;"></i>
-    </div>
-    <h5 class="fw-semibold mb-2 mt-3">Belum ada perangkat aktif</h5>
-    <p class="text-muted mb-3">Silakan pilih perangkat dulu untuk melihat data monitoring.</p>
-    <a class="btn btn-save-data" href="{% url 'device_select' %}">
-        <i class="fas fa-phone"></i>
-        <span>Pilih Perangkat</span>
-    </a>
-</div>
-{% else %}
 <!-- Dashboard Header -->
 <div class="dashboard-header-card">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
@@ -55,7 +42,11 @@
             </div>
             <div class="monitoring-indicator" id="monitoringIndicator" style="display: none;">
                 <span class="monitoring-dot"></span>
-                <span>Monitoring...</span>
+                <span id="monitoringText">Membaca...</span>
+            </div>
+            <div class="monitoring-indicator frozen" id="frozenIndicator" style="display: none;">
+                <span class="monitoring-dot frozen"></span>
+                <span>Menunggu...</span>
             </div>
         </div>
     </div>
@@ -92,12 +83,61 @@
     <p class="status-description" id="overallStatusDesc">Semua parameter kesehatan normal.</p>
 </div>
 
-<!-- Reading Status -->
-<div class="reading-status-card">
-    <div class="reading-label">Status pembacaan</div>
-    <div class="reading-hint" id="readingHint">Belum ada data masuk.</div>
+<!-- Tips Panel -->
+<div class="tips-panel">
+    <div class="tips-header">
+        <div class="tips-icon-wrapper">
+            <i class="fas fa-lightbulb"></i>
+        </div>
+        <div class="tips-title-wrapper">
+            <h4>Tips Menyimpan Data</h4>
+            <p>Panduan lengkap menyimpan data denyut jantung dan suhu tubuh</p>
+        </div>
+    </div>
+    
+    <div class="tips-grid">
+        <div class="tip-card">
+            <div class="tip-card-number">01</div>
+            <div class="tip-card-icon">
+                <i class="fas fa-hand-pointer"></i>
+            </div>
+            <h5>Tempelkan Jari</h5>
+            <p>Tempelkan jari ke sensor MAX30102 dan tunggu hingga nilai BPM stabil.</p>
+        </div>
+        
+        <div class="tip-card">
+            <div class="tip-card-number">02</div>
+            <div class="tip-card-icon">
+                <i class="fas fa-lock"></i>
+            </div>
+            <h5>Nilai Terkunci</h5>
+            <p>Lepas jari - nilai BPM akan terkunci untuk memudahkan pembacaan suhu.</p>
+        </div>
+        
+        <div class="tip-card">
+            <div class="tip-card-number">03</div>
+            <div class="tip-card-icon">
+                <i class="fas fa-bullseye"></i>
+            </div>
+            <h5>Arahkan Sensor</h5>
+            <p>Arahkan MLX90614 ke dahi (5 cm), tahan 3-5 detik hingga stabil.</p>
+        </div>
+        
+        <div class="tip-card">
+            <div class="tip-card-number">04</div>
+            <div class="tip-card-icon">
+                <i class="fas fa-save"></i>
+            </div>
+            <h5>Simpan Data</h5>
+            <p>Klik "Simpan Data" untuk menyimpan hasil pengukuran ke database.</p>
+        </div>
+    </div>
+    
+    <div class="tip-footer">
+        <i class="fas fa-info-circle"></i>
+        <p><strong>Catatan:</strong> Anda bisa menggunakan sensor tanpa menyimpan data - cukup tempelkan jari dan arahkan sensor ke dahi.</p>
+    </div>
 </div>
-{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -183,10 +223,11 @@
         const hrStatus = document.getElementById('hrStatus');
         const tempStatus = document.getElementById('tempStatus');
         const connectionStatus = document.getElementById('connectionStatus');
-        const readingHint = document.getElementById('readingHint');
         const saveBtn = document.getElementById('saveBtn');
         const monitoringIndicator = document.getElementById('monitoringIndicator');
+        const frozenIndicator = document.getElementById('frozenIndicator');
         const tempMonitoringIndicator = document.getElementById('tempMonitoringIndicator');
+        const monitoringText = document.getElementById('monitoringText');
 
         if (!data.last_reading_time) {
             hrValue.textContent = '--';
@@ -194,29 +235,40 @@
             updateStatusBadge('hrStatus', '-');
             updateStatusBadge('tempStatus', '-');
             updateOverallStatus('-');
-            readingHint.textContent = 'Belum ada data masuk.';
             monitoringIndicator.style.display = 'none';
+            frozenIndicator.style.display = 'none';
             tempMonitoringIndicator.style.display = 'none';
             saveBtn.disabled = true;
         } else {
             hrValue.textContent = data.heart_rate_bpm !== null ? data.heart_rate_bpm.toFixed(0) : '--';
             tempValue.textContent = data.body_temp_c !== null ? data.body_temp_c.toFixed(1) : '--';
-            
+
             updateStatusBadge('hrStatus', data.heart_status);
             updateStatusBadge('tempStatus', data.temp_status);
-            
+
             updateMetricCard('heartCard', data.heart_status);
             updateMetricCard('tempCard', data.temp_status);
-            
+
             updateOverallStatus(data.overall_status);
 
-            if (data.last_reading_time !== lastReadingTime) {
-                readingHint.textContent = 'Data terbaru diterima.';
-                lastReadingTime = data.last_reading_time;
+            // Update indikator monitoring berdasarkan status jari dan freeze
+            if (data.finger_detected) {
+                // Jari terdeteksi - Monitoring normal
                 monitoringIndicator.style.display = 'flex';
+                frozenIndicator.style.display = 'none';
+                monitoringIndicator.className = 'monitoring-indicator';
+                monitoringText.textContent = 'Monitoring...';
+                tempMonitoringIndicator.style.display = 'flex';
+            } else if (data.bpm_frozen) {
+                // BPM freeze - Data terkunci
+                monitoringIndicator.style.display = 'none';
+                frozenIndicator.style.display = 'flex';
                 tempMonitoringIndicator.style.display = 'flex';
             } else {
-                readingHint.textContent = 'Menunggu pembacaan berikutnya...';
+                // Tidak ada jari - Menunggu
+                monitoringIndicator.style.display = 'none';
+                frozenIndicator.style.display = 'none';
+                tempMonitoringIndicator.style.display = 'flex';
             }
 
             saveBtn.disabled = !data.can_save;
@@ -256,18 +308,113 @@
             credentials: 'same-origin'
         });
         if (res.ok) {
+            const data = await res.json();
+            showSaveNotification(data);
             fetchLatest();
         }
     }
 
-    {% if active_device %}
-    document.getElementById('saveBtn').addEventListener('click', saveLatest);
-    {% endif %}
+    function showSaveNotification(data) {
+        // Get current values from the UI
+        const hrValue = document.getElementById('hrValue').textContent;
+        const tempValue = document.getElementById('tempValue').textContent;
+        const hrStatus = document.getElementById('hrStatus').textContent;
+        const tempStatus = document.getElementById('tempStatus').textContent;
+
+        // Determine overall status based on both sensors
+        // - Sehat: Kedua parameter normal
+        // - Waspada: Salah satu parameter tidak normal
+        // - Bahaya: Kedua parameter tidak normal
+        let overallStatus = 'Sehat';
+        let overallStatusClass = 'sehat';
+        let statusIcon = 'fa-check-circle';
+        let statusMessage = 'Semua parameter kesehatan normal.';
+
+        const isHeartNormal = hrStatus === 'Normal';
+        const isTempNormal = tempStatus === 'Normal';
+        const isHeartAbnormal = !isHeartNormal;
+        const isTempAbnormal = !isTempNormal;
+
+        if (isHeartAbnormal && isTempAbnormal) {
+            // Kedua parameter tidak normal → Bahaya
+            overallStatus = 'Bahaya';
+            overallStatusClass = 'bahaya';
+            statusIcon = 'fa-exclamation-triangle';
+            statusMessage = 'Kedua parameter kesehatan tidak normal. Segera konsultasi medis.';
+        } else if (isHeartAbnormal || isTempAbnormal) {
+            // Salah satu parameter tidak normal → Waspada
+            overallStatus = 'Waspada';
+            overallStatusClass = 'waspada';
+            statusIcon = 'fa-exclamation-circle';
+            statusMessage = 'Salah satu parameter kesehatan tidak normal. Pantau terus kondisi Anda.';
+        }
+
+        const notification = document.createElement('div');
+        notification.className = 'save-notification';
+        notification.innerHTML = `
+            <div class="save-notification-icon ${overallStatusClass}">
+                <i class="fas ${statusIcon}"></i>
+            </div>
+            <div class="save-notification-content">
+                <div class="save-notification-title">Data Berhasil Disimpan</div>
+                <div class="save-notification-message">${statusMessage}</div>
+                <div class="save-notification-overall">
+                    <span class="save-overall-label">Status Keseluruhan:</span>
+                    <span class="save-overall-badge ${overallStatusClass}">${overallStatus}</span>
+                </div>
+                <div class="save-notification-details">
+                    <div class="save-detail-item">
+                        <i class="fas fa-heart-pulse"></i>
+                        <span>Denyut Jantung: <strong>${hrValue !== '--' ? hrValue + ' BPM' : '--'}</strong></span>
+                        <span class="save-status-badge ${getStatusClass(hrStatus)}">${hrStatus}</span>
+                    </div>
+                    <div class="save-detail-item">
+                        <i class="fas fa-thermometer-half"></i>
+                        <span>Suhu Tubuh: <strong>${tempValue !== '--' ? tempValue + ' °C' : '--'}</strong></span>
+                        <span class="save-status-badge ${getStatusClass(tempStatus)}">${tempStatus}</span>
+                    </div>
+                </div>
+            </div>
+            <button class="save-notification-close" onclick="closeNotification(this.parentElement)" title="Tutup">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        document.body.appendChild(notification);
+
+        setTimeout(() => notification.classList.add('show'), 10);
+    }
+
+    function closeNotification(notification) {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 300);
+    }
+
+    // Close notification when clicking outside
+    document.addEventListener('click', function(e) {
+        const notification = document.querySelector('.save-notification.show');
+        if (notification && !notification.contains(e.target)) {
+            closeNotification(notification);
+        }
+    });
+
+    // Auto open modal if no active device - simple approach
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            {% if not active_device %}
+            console.log('No active device, opening modal...');
+            if (typeof window.openDeviceModal === 'function') {
+                window.openDeviceModal();
+                console.log('Modal opened!');
+            }
+            {% endif %}
+        }, 500);
+    });
 
     // Fetch data periodically if active device exists
     fetchLatest();
     {% if active_device %}
     setInterval(fetchLatest, 2000);
+    document.getElementById('saveBtn').addEventListener('click', saveLatest);
     {% endif %}
 </script>
 {% endblock %}

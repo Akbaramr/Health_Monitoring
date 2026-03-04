@@ -14,12 +14,37 @@
     </div>
 </div>
 
+<!-- Filter Card -->
+<div class="hm-filter-card">
+    <div class="filter-header">
+        <i class="bi bi-funnel"></i>
+        <span>Filter Perangkat</span>
+    </div>
+    <div class="filter-content">
+        <select class="filter-device-select" id="deviceFilter" onchange="filterByDevice()">
+            <option value="">-- Semua Perangkat --</option>
+            {% for dev in all_devices %}
+            <option value="{{ dev.id }}" {% if filter_device and filter_device.id == dev.id %}selected{% endif %}>
+                {{ dev.display_name }} ({{ dev.kode_perangkat }})
+            </option>
+            {% endfor %}
+        </select>
+        {% if filter_device %}
+        <a href="{% url 'histori' %}" class="filter-clear-btn">
+            <i class="bi bi-x-circle"></i>
+            <span>Clear Filter</span>
+        </a>
+        {% endif %}
+    </div>
+</div>
+
 <!-- Table Card -->
 <div class="histori-table-card">
     <div class="table-responsive">
         <table class="histori-table">
             <thead>
                 <tr>
+                    <th>No</th>
                     <th>Waktu</th>
                     <th>Denyut Jantung</th>
                     <th>Suhu Tubuh</th>
@@ -28,9 +53,10 @@
             </thead>
             <tbody>
                 {% for record in records %}
-                <tr>
+                <tr class="histori-row" data-record-id="{{ record.id }}">
+                    <td class="text-center">{{ forloop.counter }}</td>
                     <td>
-                        <span class="histori-time">{{ record.timestamp|date:"d/n/Y, H.i.s" }}</span>
+                        <span class="histori-time">{{ record.timestamp|date:"d/n/Y, H:i" }} WITA</span>
                     </td>
                     <td>
                         <span class="histori-value {% if record.heart_status == 'Normal' %}hv-normal{% elif record.heart_status == 'Bradykardia' or record.heart_status == 'Takikardia' %}hv-bahaya{% else %}hv-waspada{% endif %}">
@@ -47,10 +73,20 @@
                             {% if record.overall_status == 'Sehat' or record.overall_status == 'Normal' %}Sehat{% elif record.overall_status == 'Waspada' %}Waspada{% else %}Bahaya{% endif %}
                         </span>
                     </td>
+                    <td class="td-delete">
+                        <!-- Desktop: Show on hover -->
+                        <button class="btn-delete-inline" onclick="openDeleteModal({{ record.id }})" title="Hapus data ini">
+                            <i class="bi bi-trash3"></i>
+                        </button>
+                        <!-- Mobile: Always visible button -->
+                        <button class="btn-delete-mobile" onclick="openDeleteModal({{ record.id }})" title="Hapus data ini">
+                            <i class="bi bi-trash3"></i>
+                        </button>
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="4" class="text-center">
+                    <td colspan="5" class="text-center">
                         {% if active_device %}
                             <p class="text-muted mb-0">Belum ada data histori.</p>
                         {% else %}
@@ -62,10 +98,14 @@
             </tbody>
         </table>
     </div>
-    
+
     <!-- Footer: Total Data -->
     <div class="histori-footer">
-        Total data tersimpan: {{ records|length }} record
+        {% if filter_device %}
+            Total data: {{ records|length }} record dari {{ filter_device.display_name }}
+        {% else %}
+            Total data tersimpan: {{ records|length }} record
+        {% endif %}
     </div>
 </div>
 
@@ -76,4 +116,333 @@
     <span class="normal-divider">|</span>
     <span class="normal-item"><i class="bi bi-thermometer"></i> Suhu Tubuh: <strong>36,0–37,5 °C</strong></span>
 </div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="delete-modal-overlay">
+    <div class="delete-modal-content">
+        <div class="delete-modal-icon">
+            <i class="bi bi-exclamation-triangle"></i>
+        </div>
+        <h3 class="delete-modal-title">Hapus Data?</h3>
+        <p class="delete-modal-message">Apakah Anda yakin ingin menghapus data ini? Tindakan ini tidak dapat dibatalkan.</p>
+        <div class="delete-modal-actions">
+            <button class="btn-modal-cancel" onclick="closeDeleteModal()">Batal</button>
+            <button class="btn-modal-delete" onclick="confirmDelete()">Hapus</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let deleteRecordId = null;
+
+// Filter by device
+function filterByDevice() {
+    const deviceId = document.getElementById('deviceFilter').value;
+    if (deviceId) {
+        window.location.href = '?device_id=' + deviceId;
+    } else {
+        window.location.href = '{% url "histori" %}';
+    }
+}
+
+function openDeleteModal(recordId) {
+    deleteRecordId = recordId;
+    document.getElementById('deleteModal').classList.add('show');
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.remove('show');
+    deleteRecordId = null;
+}
+
+function confirmDelete() {
+    if (deleteRecordId === null) return;
+    
+    fetch('/histori/delete/' + deleteRecordId + '/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeDeleteModal();
+            showNotification('Data berhasil dihapus', 'success');
+            setTimeout(() => location.reload(), 800);
+        } else {
+            closeDeleteModal();
+            showNotification('Gagal menghapus data: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        closeDeleteModal();
+        showNotification('Terjadi kesalahan saat menghapus data', 'error');
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `delete-notification notification-${type}`;
+    notification.innerHTML = `
+        <i class="bi bi-${type === 'success' ? 'check-circle-fill' : 'exclamation-triangle-fill'}"></i>
+        <span class="delete-notification-message">${message}</span>
+    `;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => notification.classList.add('show'), 10);
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 400);
+    }, 3500);
+}
+
+// Close modal on outside click
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+    if (e.target === this) closeDeleteModal();
+});
+</script>
+
+<style>
+.histori-table th:first-child,
+.histori-table td:first-child {
+    text-align: center;
+}
+
+/* Delete Button - Hidden by default, shown on row hover (Desktop) */
+.td-delete {
+    width: 50px;
+    text-align: center;
+    position: relative;
+}
+
+.btn-delete-inline {
+    background: transparent;
+    border: none;
+    color: #d1d5db;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: translateX(10px);
+}
+
+.histori-row:hover .btn-delete-inline {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.btn-delete-inline:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+/* Mobile Delete Button - Always visible on mobile */
+.btn-delete-mobile {
+    display: none;
+    background: #fee2e2;
+    border: none;
+    color: #dc2626;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.btn-delete-mobile:active {
+    background: #fecaca;
+    transform: scale(0.95);
+}
+
+.btn-delete-inline i {
+    font-size: 16px;
+}
+
+/* Delete Modal */
+.delete-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.delete-modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.delete-modal-content {
+    background: white;
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    transform: scale(0.9);
+    transition: transform 0.3s ease;
+}
+
+.delete-modal-overlay.show .delete-modal-content {
+    transform: scale(1);
+}
+
+.delete-modal-icon {
+    width: 64px;
+    height: 64px;
+    background: #fee2e2;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+}
+
+.delete-modal-icon i {
+    font-size: 32px;
+    color: #dc2626;
+}
+
+.delete-modal-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1f2937;
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+.delete-modal-message {
+    font-size: 14px;
+    color: #6b7280;
+    text-align: center;
+    line-height: 1.6;
+    margin-bottom: 24px;
+}
+
+.delete-modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.btn-modal-cancel,
+.btn-modal-delete {
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.btn-modal-cancel {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.btn-modal-cancel:hover {
+    background: #e5e7eb;
+}
+
+.btn-modal-delete {
+    background: #dc2626;
+    color: white;
+}
+
+.btn-modal-delete:hover {
+    background: #b91c1c;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+/* Notification Toast */
+.delete-notification {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    padding: 16px 24px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+    z-index: 10000;
+    transform: translateX(450px);
+    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    min-width: 280px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.delete-notification.show {
+    transform: translateX(0);
+}
+
+.delete-notification.success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.delete-notification.error {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+}
+
+.delete-notification i {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.delete-notification-message {
+    flex: 1;
+}
+
+/* Mobile Responsive - Delete button always visible */
+@media (max-width: 768px) {
+    .btn-delete-inline {
+        display: none !important;
+    }
+    
+    .btn-delete-mobile {
+        display: inline-flex !important;
+    }
+    
+    .td-delete {
+        width: 60px;
+    }
+}
+</style>
 {% endblock %}

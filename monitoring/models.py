@@ -29,6 +29,8 @@ class DeviceReading(models.Model):
     is_valid = models.BooleanField(default=False)
     last_saved_reading_time = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
+    finger_detected = models.BooleanField(default=False)
+    bpm_frozen = models.BooleanField(default=False)
 
     def __str__(self):
         return f'Reading {self.device.display_name()}'

@@ -17,6 +17,30 @@
   </div>
 </div>
 
+<!-- Filter Card -->
+<div class="hm-filter-card">
+    <div class="filter-header">
+        <i class="bi bi-funnel"></i>
+        <span>Filter Perangkat</span>
+    </div>
+    <div class="filter-content">
+        <select class="filter-device-select" id="deviceFilter" onchange="filterByDevice()">
+            <option value="">-- Pilih Perangkat --</option>
+            {% for dev in all_devices %}
+            <option value="{{ dev.id }}" {% if filter_device and filter_device.id == dev.id %}selected{% endif %}>
+                {{ dev.display_name }} ({{ dev.kode_perangkat }})
+            </option>
+            {% endfor %}
+        </select>
+        {% if filter_device %}
+        <a href="{% url 'grafik' %}" class="filter-clear-btn">
+            <i class="bi bi-x-circle"></i>
+            <span>Clear Filter</span>
+        </a>
+        {% endif %}
+    </div>
+</div>
+
 {% if not active_device %}
   <div class="card">
     <div class="card-body text-center">
@@ -64,6 +88,44 @@
     </div>
   </div>
 
+  <!-- INFO SECTION: Tentang Grafik & Interpretasi Data -->
+  <div class="hm-info-section">
+    <div class="row g-3">
+      
+      <!-- Tentang Grafik -->
+      <div class="col-md-6">
+        <div class="hm-info-card">
+          <h5 class="hm-info-card-title">
+            <span class="hm-info-card-icon">📊</span>
+            Tentang Grafik
+          </h5>
+          <ul class="hm-info-card-list">
+            <li>Grafik menampilkan data dari sensor IoT.</li>
+            <li>Sistem menyimpan 20 data pembacaan terakhir.</li>
+            <li>Hover pada titik untuk melihat nilai detail.</li>
+            <li>Pantau pola kenaikan/penurunan yang tidak wajar.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Interpretasi Data -->
+      <div class="col-md-6">
+        <div class="hm-info-card">
+          <h5 class="hm-info-card-title">
+            <span class="hm-info-card-icon">📈</span>
+            Interpretasi Data
+          </h5>
+          <ul class="hm-info-card-list">
+            <li>Denyut jantung normal (istirahat): 60-100 BPM.</li>
+            <li>Suhu tubuh normal: 36,0-37,5°C.</li>
+            <li>Konsultasi medis jika ada keluhan berkepanjangan.</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
 {% endif %}
 {% endblock %}
 
@@ -71,6 +133,16 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
+  // Filter function
+  function filterByDevice() {
+    const deviceId = document.getElementById('deviceFilter').value;
+    if (deviceId) {
+      window.location.href = '?device_id=' + deviceId;
+    } else {
+      window.location.href = '{% url "grafik" %}';
+    }
+  }
+
   // aman untuk editor + aman untuk Django
   const HAS_DEVICE = "{{ active_device|yesno:'true,false' }}" === "true";
   const API_RECORDS_URL = "{% url 'api_records' %}?limit=20";
@@ -103,7 +175,7 @@
     }
   }
 
-  function buildCommonOptions({ yTickSuffix }) {
+  function buildCommonOptions({ yTickSuffix, records }) {
     return {
       responsive: true,
       maintainAspectRatio: false,
@@ -121,7 +193,25 @@
         },
         tooltip: {
           backgroundColor: 'rgba(15,23,42,0.92)',
-          padding: 12
+          padding: 12,
+          callbacks: {
+            title: (items) => {
+              // Tampilkan timestamp lengkap di tooltip
+              const record = records[items[0].dataIndex];
+              if (record && record.timestamp) {
+                const date = new Date(record.timestamp);
+                return date.toLocaleString('id-ID', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                });
+              }
+              return '';
+            }
+          }
         }
       },
       scales: {
@@ -176,6 +266,12 @@
       const bpmData  = records.map(x => Number(x.heart_rate_bpm ?? 0));
       const tempData = records.map(x => Number(x.body_temp_c ?? 0));
 
+      // Build common options dengan records untuk tooltip lengkap
+      const commonOptions = {
+        bpm: buildCommonOptions({ yTickSuffix: 'BPM', records }),
+        temp: buildCommonOptions({ yTickSuffix: '°C', records })
+      };
+
       // =====================
       // Chart 1: Heart Rate
       // =====================
@@ -203,12 +299,13 @@
           }]
         },
         options: {
-          ...buildCommonOptions({ yTickSuffix: 'BPM' }),
+          ...commonOptions.bpm,
           plugins: {
-            ...buildCommonOptions({ yTickSuffix: 'BPM' }).plugins,
+            ...commonOptions.bpm.plugins,
             tooltip: {
-              ...buildCommonOptions({ yTickSuffix: 'BPM' }).plugins.tooltip,
+              ...commonOptions.bpm.plugins.tooltip,
               callbacks: {
+                ...commonOptions.bpm.plugins.tooltip.callbacks,
                 label: (ctx) => ` ${ctx.parsed.y} BPM`
               }
             }
@@ -245,12 +342,13 @@
           }]
         },
         options: {
-          ...buildCommonOptions({ yTickSuffix: '°C' }),
+          ...commonOptions.temp,
           plugins: {
-            ...buildCommonOptions({ yTickSuffix: '°C' }).plugins,
+            ...commonOptions.temp.plugins,
             tooltip: {
-              ...buildCommonOptions({ yTickSuffix: '°C' }).plugins.tooltip,
+              ...commonOptions.temp.plugins.tooltip,
               callbacks: {
+                ...commonOptions.temp.plugins.tooltip.callbacks,
                 label: (ctx) => ` ${Number(ctx.parsed.y).toFixed(1)} °C`
               }
             }
@@ -269,7 +367,7 @@
 
   document.addEventListener('DOMContentLoaded', loadCharts);
 
-  // OPTIONAL realtime
-  // setInterval(loadCharts, 5000);
+  // Auto-refresh setiap 3 detik
+  setInterval(loadCharts, 3000);
 </script>
 {% endblock %}

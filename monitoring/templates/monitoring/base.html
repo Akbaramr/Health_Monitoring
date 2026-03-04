@@ -7,144 +7,163 @@
     <title>{% block title %}Health Monitor{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="{% static 'monitoring/styles.css' %}" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 <body>
-<nav class="hm-navbar navbar navbar-expand-lg navbar-light hm-navbar-sticky">
-  <div class="container-fluid hm-navbar-inner">
 
-    <!-- LEFT: logo + nama + subtitle device -->
-<a class="hm-brand d-flex align-items-center text-decoration-none" href="{% url 'dashboard' %}">
-  <div class="hm-brand-icon">
-    <i class="bi bi-activity"></i>
-  </div>
-  <div class="ms-3">
-    <div class="hm-brand-title">IoT Health Monitor</div>
-    <div class="hm-brand-subtitle">
-      {% if active_device %}
-        {{ active_device.display_name }} ({{ active_device.kode_perangkat }})
-      {% else %}
-        Belum ada perangkat aktif
-      {% endif %}
-    </div>
-  </div>
-</a>
-
-
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain"
-            aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-
-    <!-- CENTER: menu -->
-    <div class="collapse navbar-collapse justify-content-end me-3" id="navbarMain">
-      <ul class="navbar-nav hm-nav">
-
-        <li class="nav-item">
-          <a class="nav-link hm-nav-link {% if request.resolver_match.url_name == 'dashboard' %}is-active{% endif %}"
-   href="{% url 'dashboard' %}">
-  <i class="bi bi-activity"></i>
-  <span>Dashboard</span>
-</a>
-
-<a class="nav-link hm-nav-link {% if request.resolver_match.url_name == 'grafik' %}is-active{% endif %}"
-   href="{% url 'grafik' %}">
-  <i class="bi bi-bar-chart-line"></i>
-  <span>Grafik</span>
-</a>
-
-<a class="nav-link hm-nav-link {% if request.resolver_match.url_name == 'histori' %}is-active{% endif %}"
-   href="{% url 'histori' %}">
-  <i class="bi bi-clock-history"></i>
-  <span>Histori</span>
-</a>
-
-        </li>
-
-      </ul>
-    </div>
-
-    <!-- RIGHT: profile pill -->
-    <div class="dropdown">
-      <button class="hm-profile btn dropdown-toggle" type="button" id="profileDropdown"
-        data-bs-toggle="dropdown" aria-expanded="false">
-  <span class="hm-profile-avatar">
-    <i class="bi bi-person"></i>
-  </span>
-  <span class="hm-profile-name">{{ user.username }}</span>
-</button>
-
-
-      <div class="dropdown-menu dropdown-menu-end hm-profile-menu" aria-labelledby="profileDropdown">
-        <div class="hm-profile-head">
-          <div class="hm-profile-head-name">{{ user.username }}</div>
-          <div class="hm-profile-head-email">
-            {{ user.email|default:"" }}
-          </div>
+<!-- Navbar -->
+<nav class="hm-navbar">
+  <div class="hm-navbar-container">
+    <a class="hm-brand" href="{% url 'dashboard' %}">
+      <div class="hm-brand-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+        </svg>
+      </div>
+      <div class="hm-brand-text">
+        <div class="hm-brand-name">IoT Health Monitor</div>
+        <div class="hm-brand-device">
+          {% if active_device %}
+            {{ active_device.display_name }} ({{ active_device.kode_perangkat }})
+          {% else %}
+            Belum ada perangkat aktif
+          {% endif %}
         </div>
+      </div>
+    </a>
 
-        <div class="dropdown-divider"></div>
+    <div class="hm-nav-menu">
+      <a class="hm-nav-item {% if request.resolver_match.url_name == 'dashboard' %}is-active{% endif %}" href="{% url 'dashboard' %}">
+        <svg class="hm-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+        </svg>
+        <span>Dashboard</span>
+      </a>
+      <a class="hm-nav-item {% if request.resolver_match.url_name == 'grafik' %}is-active{% endif %}" href="{% url 'grafik' %}">
+        <svg class="hm-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"></line>
+          <line x1="12" y1="20" x2="12" y2="4"></line>
+          <line x1="6" y1="20" x2="6" y2="14"></line>
+        </svg>
+        <span>Grafik</span>
+      </a>
+      <a class="hm-nav-item {% if request.resolver_match.url_name == 'histori' %}is-active{% endif %}" href="{% url 'histori' %}">
+        <svg class="hm-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        <span>Histori</span>
+      </a>
+    </div>
 
-        <!-- Aksi: Ganti perangkat -->
-        <a class="dropdown-item hm-menu-item hm-menu-primary" href="#" onclick="openDeviceModal()">
-  <i class="bi bi-phone"></i>
-  <span>Ganti Perangkat</span>
-</a>
-
-<a class="dropdown-item hm-menu-item hm-menu-danger" href="{% url 'logout' %}">
-  <i class="bi bi-box-arrow-right"></i>
-  <span>Logout</span>
-</a>
-
+    <div class="hm-user-menu">
+      <div class="dropdown">
+        <button class="hm-user-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <div class="hm-user-avatar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </div>
+          <span class="hm-user-name">{{ user.username }}</span>
+          <svg class="hm-user-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+        <div class="dropdown-menu hm-dropdown-menu dropdown-menu-end">
+          <div class="hm-profile-head">
+            <div class="hm-profile-head-name">{{ user.username }}</div>
+            <div class="hm-profile-head-email">{{ user.email|default:"" }}</div>
+          </div>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item hm-menu-item hm-menu-primary" href="#" onclick="openDeviceModal(); return false;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+              <line x1="12" y1="18" x2="12.01" y2="18"></line>
+            </svg>
+            <span>Perangkat</span>
+          </a>
+          <a class="dropdown-item hm-menu-item hm-menu-danger" href="{% url 'logout' %}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            <span>Logout</span>
+          </a>
+        </div>
       </div>
     </div>
-
   </div>
 </nav>
 
-<!-- Modal untuk manajemen perangkat -->
-<div class="modal fade" id="deviceModal" tabindex="-1" aria-labelledby="deviceModalLabel" aria-hidden="true">
+<!-- Modal Manajemen Perangkat -->
+<div class="modal fade" id="deviceModal" tabindex="-1" data-bs-backdrop="static">
   <div class="modal-dialog modal-lg">
-    <div class="modal-content">
+    <div class="modal-content hm-device-modal">
       <div class="modal-header">
-        <h5 class="modal-title" id="deviceModalLabel">Manajemen Perangkat</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-title-wrapper">
+          <div class="modal-icon">
+            <i class="bi bi-phone"></i>
+          </div>
+          <div>
+            <h5 class="modal-title">Manajemen Perangkat</h5>
+            <p class="modal-subtitle">Kelola perangkat IoT Health Monitor Anda</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" id="modalCloseBtn"></button>
       </div>
       <div class="modal-body">
-        <!-- Tab navigasi -->
-        <ul class="nav nav-tabs" id="deviceTab" role="tablist">
-          <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="add-tab" data-bs-toggle="tab" data-bs-target="#add" type="button" role="tab">Tambah Perangkat</button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="list-tab" data-bs-toggle="tab" data-bs-target="#list" type="button" role="tab">Daftar Perangkat</button>
-          </li>
-        </ul>
-        
-        <div class="tab-content mt-3" id="deviceTabContent">
-          <!-- Form Tambah Perangkat -->
-          <div class="tab-pane fade show active" id="add" role="tabpanel">
-            <form id="addDeviceForm" method="post" action="{% url 'device_add' %}">
+        <!-- Tab Navigation -->
+        <div class="hm-tab-nav-custom">
+          <button class="hm-tab-custom active" id="add-tab" data-bs-toggle="tab" data-bs-target="#add-panel" type="button">
+            <i class="bi bi-plus-circle"></i>
+            <span>Tambah Perangkat</span>
+          </button>
+          <button class="hm-tab-custom" id="list-tab" data-bs-toggle="tab" data-bs-target="#list-panel" type="button">
+            <i class="bi bi-list-ul"></i>
+            <span>Daftar Perangkat</span>
+          </button>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="tab-content mt-4">
+          <!-- Add Device Panel -->
+          <div class="tab-pane fade show active" id="add-panel">
+            <form id="addDeviceForm" class="hm-form-clean">
               {% csrf_token %}
-              <div class="mb-3">
-                <label for="kode_perangkat" class="form-label">Kode Perangkat</label>
-                <input type="text" class="form-control" id="kode_perangkat" name="kode_perangkat" required>
-                <div class="form-text">Contoh: HM-ESP32-001</div>
+              <div class="hm-form-group-custom">
+                <label class="hm-label" for="kode_perangkat">
+                  <i class="bi bi-upc-scan me-2"></i>Kode Perangkat
+                  <span class="required-badge">*</span>
+                </label>
+                <input type="text" class="hm-input-custom" id="kode_perangkat" name="kode_perangkat" required placeholder="Contoh: HM-ESP32-001">
+                <small class="hm-form-text">Gunakan format unik untuk setiap perangkat</small>
               </div>
-              <div class="mb-3">
-                <label for="nama_perangkat" class="form-label">Nama Perangkat</label>
-                <input type="text" class="form-control" id="nama_perangkat" name="nama_perangkat" required>
-                <div class="form-text">Contoh: ESP32 Ruang Tamu</div>
+              <div class="hm-form-group-custom">
+                <label class="hm-label" for="nama_perangkat">
+                  <i class="bi bi-tag me-2"></i>Nama Perangkat
+                  <span class="optional-badge">(opsional)</span>
+                </label>
+                <input type="text" class="hm-input-custom" id="nama_perangkat" name="nama_perangkat" placeholder="Contoh: ESP32 Ruang Tamu">
+                <small class="hm-form-text">Nama yang mudah Anda ingat</small>
               </div>
-              <button type="submit" class="btn btn-primary">Simpan</button>
+              <div class="hm-form-actions-custom">
+                <button type="submit" class="hm-btn-submit">
+                  <i class="bi bi-save me-2"></i>Simpan Perangkat
+                </button>
+              </div>
             </form>
           </div>
-          
-          <!-- Daftar Perangkat -->
-          <div class="tab-pane fade" id="list" role="tabpanel">
+
+          <!-- List Device Panel -->
+          <div class="tab-pane fade" id="list-panel">
             <div id="deviceList">
-              <!-- Daftar perangkat akan dimuat secara dinamis -->
+              <div class="loading-state-custom">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2">Memuat daftar perangkat...</p>
+              </div>
             </div>
           </div>
         </div>
@@ -153,86 +172,225 @@
   </div>
 </div>
 
-<main  class="container main-wrap" style="padding-top: 110px;">
+<main class="container main-wrap">
     {% if messages %}
         {% for message in messages %}
             <div class="alert alert-{{ message.tags }} mt-3" role="alert">{{ message }}</div>
         {% endfor %}
     {% endif %}
-
     {% block content %}{% endblock %}
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// Fungsi untuk membuka modal perangkat
+let deviceModal = null;
+
+// Open modal function
 function openDeviceModal() {
-    // Muat daftar perangkat ke tab daftar
-    loadDeviceList();
-    
-    // Tampilkan modal
-    var modal = new bootstrap.Modal(document.getElementById('deviceModal'));
-    modal.show();
+    if (!deviceModal) {
+        deviceModal = new bootstrap.Modal(document.getElementById('deviceModal'), {
+            backdrop: 'static',
+            keyboard: false
+        });
+    }
+    deviceModal.show();
 }
 
-// Fungsi untuk memuat daftar perangkat
-function loadDeviceList() {
-    fetch('{% url "api_devices_list" %}')
-    .then(response => response.json())
-    .then(data => {
-        const deviceListDiv = document.getElementById('deviceList');
-        if (data.devices && data.devices.length > 0) {
-            let html = '<div class="table-responsive"><table class="table table-striped"><thead><tr><th>Nama Perangkat</th><th>Kode Perangkat</th><th>Status</th><th>Aksi</th></tr></thead><tbody>';
-            data.devices.forEach(device => {
-                const isActive = device.is_active ? 'Aktif' : 'Tidak Aktif';
-                const statusClass = device.is_active ? 'text-success' : 'text-secondary';
-                html += `<tr>
-                    <td>${device.nama_perangkat || device.kode_perangkat}</td>
-                    <td>${device.kode_perangkat}</td>
-                    <td><span class="${statusClass}">${isActive}</span></td>
-                    <td>
-                        <button class="btn btn-sm ${device.is_active ? 'btn-secondary' : 'btn-primary'}" 
-                                onclick="setActiveDevice('${device.id}')">
-                            ${device.is_active ? 'Aktif' : 'Pilih'}
-                        </button>
-                    </td>
-                </tr>`;
+// Close button
+document.addEventListener('DOMContentLoaded', function() {
+    const closeBtn = document.getElementById('modalCloseBtn');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            if (deviceModal) deviceModal.hide();
+        });
+    }
+
+    // Form submit handler
+    const form = document.getElementById('addDeviceForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(form);
+            const kode = document.getElementById('kode_perangkat').value.trim();
+
+            if (!kode) {
+                alert('Kode perangkat wajib diisi!');
+                return;
+            }
+
+            fetch('/devices/add/', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    if (deviceModal) deviceModal.hide();
+                    setTimeout(() => location.reload(), 500);
+                } else {
+                    alert(data.error || 'Gagal menambahkan perangkat');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Terjadi kesalahan');
             });
-            html += '</tbody></table></div>';
-            deviceListDiv.innerHTML = html;
-        } else {
-            deviceListDiv.innerHTML = '<p class="text-muted">Anda belum memiliki perangkat terdaftar.</p>';
-        }
+        });
+    }
+
+    // Tab click handlers
+    const addTab = document.getElementById('add-tab');
+    const listTab = document.getElementById('list-tab');
+    const addPanel = document.getElementById('add-panel');
+    const listPanel = document.getElementById('list-panel');
+    
+    if (listTab && addPanel && listPanel) {
+        listTab.addEventListener('click', function() {
+            // Remove active from add tab
+            if (addTab) addTab.classList.remove('active');
+            // Add active to list tab
+            listTab.classList.add('active');
+            // Hide add panel
+            addPanel.classList.remove('show', 'active');
+            // Show list panel
+            setTimeout(() => {
+                listPanel.classList.add('show', 'active');
+                loadDeviceList();
+            }, 50);
+        });
+    }
+    
+    if (addTab && addPanel && listPanel) {
+        addTab.addEventListener('click', function() {
+            // Remove active from list tab
+            if (listTab) listTab.classList.remove('active');
+            // Add active to add tab
+            addTab.classList.add('active');
+            // Show add panel
+            addPanel.classList.add('show', 'active');
+            // Hide list panel
+            listPanel.classList.remove('show', 'active');
+        });
+    }
+});
+
+// Load device list
+function loadDeviceList() {
+    console.log('Loading device list...');
+    
+    const container = document.getElementById('deviceList');
+    if (!container) {
+        console.error('deviceList element not found');
+        return;
+    }
+    
+    container.innerHTML = '<div class="loading-state-custom"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Memuat daftar perangkat...</p></div>';
+
+    fetch('/api/devices/list/')
+    .then(res => {
+        console.log('Response status:', res.status);
+        return res.json();
     })
-    .catch(error => {
-        console.error('Error:', error);
-        document.getElementById('deviceList').innerHTML = '<p class="text-danger">Gagal memuat daftar perangkat.</p>';
+    .then(data => {
+        console.log('Device data:', data);
+        const devices = data.devices || [];
+
+        if (devices.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state-custom">
+                    <i class="bi bi-phone"></i>
+                    <p>Belum ada perangkat terdaftar</p>
+                    <button class="btn btn-primary btn-sm mt-3" onclick="document.getElementById('add-tab').click()">
+                        <i class="bi bi-plus-circle me-1"></i>Tambah Perangkat
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '<div class="table-responsive"><table class="hm-device-table-custom">';
+        html += '<thead><tr><th>Perangkat</th><th>Kode</th><th>Status</th><th>Aksi</th></tr></thead><tbody>';
+
+        devices.forEach(d => {
+            const name = d.nama_perangkat || d.kode_perangkat;
+            const isActive = d.is_active;
+            html += `<tr>
+                <td class="device-name-cell">${escapeHtml(name)}</td>
+                <td><span class="device-code-cell">${escapeHtml(d.kode_perangkat)}</span></td>
+                <td>
+                    <span class="device-status-badge ${isActive ? 'active' : 'inactive'}">
+                        ${isActive ? 'Aktif' : 'Tidak Aktif'}
+                    </span>
+                </td>
+                <td>
+                    <button class="device-action-btn ${isActive ? 'using' : 'use'}"
+                            onclick="setActiveDevice('${d.id}')">
+                        ${isActive ? '✓ Digunakan' : 'Gunakan'}
+                    </button>
+                </td>
+            </tr>`;
+        });
+
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
+        console.log('Device list loaded successfully');
+    })
+    .catch(err => {
+        console.error('Error loading device list:', err);
+        container.innerHTML = '<div class="empty-state-custom"><i class="bi bi-exclamation-triangle"></i><p>Gagal memuat daftar perangkat</p></div>';
     });
 }
 
-// Fungsi untuk memilih perangkat aktif
+// Set active device
 function setActiveDevice(deviceId) {
-    fetch('{% url "api_device_set_active" %}', {
+    fetch('/api/device/set-active/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
         },
         body: JSON.stringify({device_id: deviceId})
     })
-    .then(response => response.json())
+    .then(res => res.json())
     .then(data => {
         if (data.success) {
-            // Refresh halaman untuk memperbarui tampilan
             location.reload();
         } else {
-            alert('Gagal mengatur perangkat aktif: ' + data.message);
+            alert(data.message || 'Gagal mengatur perangkat aktif');
         }
     })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Terjadi kesalahan saat mengatur perangkat aktif.');
+    .catch(err => {
+        console.error(err);
+        alert('Terjadi kesalahan');
     });
+}
+
+// Helper functions
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie) {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            cookie = cookie.trim();
+            if (cookie.startsWith(name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
 }
 </script>
 {% block scripts %}{% endblock %}

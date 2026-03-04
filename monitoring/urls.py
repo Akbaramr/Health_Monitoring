@@ -14,6 +14,7 @@ urlpatterns = [
     path('dashboard/', views.dashboard, name='dashboard'),
     path('grafik/', views.grafik, name='grafik'),
     path('histori/', views.histori, name='histori'),
+    path('histori/delete/<int:record_id>/', views.histori_delete, name='histori_delete'),
     path('api/iot/ingest/', views.api_iot_ingest, name='api_iot_ingest'),
     path('api/devices/active/latest/', views.api_latest, name='api_latest'),
     path('api/devices/active/save-latest/', views.api_save_latest, name='api_save_latest'),
