@@ -411,9 +411,11 @@
     });
 
     // Fetch data periodically if active device exists
+    // Interval lebih cepat untuk respons lebih responsif di hosting remote
+    const POLLING_INTERVAL = 500;  // 500ms untuk hosting, 2000ms untuk lokal
     fetchLatest();
     {% if active_device %}
-    setInterval(fetchLatest, 2000);
+    setInterval(fetchLatest, POLLING_INTERVAL);
     document.getElementById('saveBtn').addEventListener('click', saveLatest);
     {% endif %}
 </script>
