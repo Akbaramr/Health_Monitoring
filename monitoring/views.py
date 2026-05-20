@@ -190,6 +190,7 @@ def _parse_timestamp(value):
     return parsed
 
 
+# Penerima Data
 @csrf_exempt
 def api_iot_ingest(request):
     if request.method != 'POST':
